@@ -32,6 +32,7 @@ const NAV_COLS = [
     { label: 'Case Studies', to: '/case-studies' },
     { label: 'Testimonials', to: '/testimonials' },
     { label: 'About Us',     to: '/about'        },
+    { label: 'Contact',      to: '/contact'      },
     { label: 'Book a Call',  to: '/book'         },
   ]},
   { title: 'Services', links: [

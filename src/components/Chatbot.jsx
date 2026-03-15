@@ -21,13 +21,18 @@ function getReply(msg) {
   return "Great question! Our team specializes in Notion and automation. Book a free call and we'll answer everything in detail — tailored to your specific needs."
 }
 
-export default function Chatbot() {
+export default function Chatbot({ forceOpen, onOpened }) {
   const [open,    setOpen]    = useState(false)
   const [msgs,    setMsgs]    = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
   const [input,   setInput]   = useState('')
   const [typing,  setTyping]  = useState(false)
   const [unread,  setUnread]  = useState(1)
   const bottomRef = useRef(null)
+
+  // Allow external open (peeping robot)
+  useEffect(() => {
+    if (forceOpen) { setOpen(true); setUnread(0); if (onOpened) onOpened() }
+  }, [forceOpen])
 
   useEffect(() => {
     if (open) { setUnread(0); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }
