@@ -392,7 +392,7 @@ export default function Dashboard() {
       </section>
 
       {/* ── CONTACT FORM (before Book CTA) ──────────────────────── */}
-      <section className="py-24" id="contact">
+      <section className="py-24 border-y border-white/[0.05]" id="contact">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Left */}

@@ -1,32 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 
+const API_BASE    = import.meta.env.VITE_API_URL || ""
+const WEBHOOK_URL = `${API_BASE}/api/chat`
+
 const BOT_RESPONSES = {
   default: "Hi! I'm NotionBot 🤖 I can help answer questions about our services. What would you like to know?",
-  services: "We offer Notion workspace setups, workflow automation with n8n/Make, AI integrations, Google Workspace automation, and API connections. Which interests you most?",
-  pricing: "Our pricing starts at $499 for starter packages and scales with project complexity. Book a free call for a custom quote tailored to your needs!",
-  notion: "We build custom Notion databases, dashboards, and project management systems — perfectly structured for your team's workflow.",
-  automation: "We automate repetitive tasks using n8n, Make (Integromat), and Zapier — connecting your tools so they work together seamlessly 24/7.",
-  contact: "You can reach us on WhatsApp at +63 966 367 1854, Instagram @notionnik, or book a free discovery call through our Book page!",
-  book: "Book your free 30-minute discovery call at our Book page! We'll map out how automation can save you 10+ hours a week. No pressure, just genuine advice.",
-}
-
-function getReply(msg) {
-  const m = msg.toLowerCase()
-  if (m.includes('service') || m.includes('offer') || m.includes('do you'))   return BOT_RESPONSES.services
-  if (m.includes('price') || m.includes('cost') || m.includes('how much'))     return BOT_RESPONSES.pricing
-  if (m.includes('notion'))                                                     return BOT_RESPONSES.notion
-  if (m.includes('automat') || m.includes('workflow') || m.includes('integr')) return BOT_RESPONSES.automation
-  if (m.includes('contact') || m.includes('email') || m.includes('reach'))     return BOT_RESPONSES.contact
-  if (m.includes('book') || m.includes('call') || m.includes('consult'))       return BOT_RESPONSES.book
-  return "Great question! Our team specializes in Notion and automation. Book a free call and we'll answer everything in detail — tailored to your specific needs."
 }
 
 export default function Chatbot({ forceOpen, onOpened }) {
-  const [open,    setOpen]    = useState(false)
-  const [msgs,    setMsgs]    = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
-  const [input,   setInput]   = useState('')
-  const [typing,  setTyping]  = useState(false)
-  const [unread,  setUnread]  = useState(1)
+  const [open,           setOpen]           = useState(false)
+  const [msgs,           setMsgs]           = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
+  const [input,          setInput]          = useState('')
+  const [typing,         setTyping]         = useState(false)
+  const [unread,         setUnread]         = useState(1)
+  const [conversationId, setConversationId] = useState(null)
+  const [showSuggestions,setShowSuggestions]= useState(true)
   const bottomRef = useRef(null)
 
   // Allow external open (peeping robot)
@@ -38,18 +26,58 @@ export default function Chatbot({ forceOpen, onOpened }) {
     if (open) { setUnread(0); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }
   }, [open, msgs])
 
-  const send = () => {
-    const txt = input.trim()
-    if (!txt) return
+  const send = async (overrideText) => {
+    const txt = (overrideText ?? input).trim()
+    if (!txt || typing) return
+
     setMsgs(m => [...m, { from: 'user', text: txt }])
     setInput('')
     setTyping(true)
-    setTimeout(() => {
-      setTyping(false)
-      setMsgs(m => [...m, { from: 'bot', text: getReply(txt) }])
-      if (!open) setUnread(n => n + 1)
-    }, 900 + Math.random() * 600)
+    setShowSuggestions(false)
+
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message:        txt,
+          timestamp:      new Date().toISOString(),
+          source:         'NotionNik Chatbot',
+          conversationId: conversationId || '',
+        }),
+      })
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+
+      const data = await response.json()
+
+      // Persist conversation ID for follow-up messages
+      if (data.conversationId) setConversationId(data.conversationId)
+
+      const reply =
+        data.reply ||
+        "Thanks for your message! Our team will get back to you shortly. You can also reach us on WhatsApp at +63 966 367 1854."
+
+      setTimeout(() => {
+        setTyping(false)
+        setMsgs(m => [...m, { from: 'bot', text: reply }])
+        if (!open) setUnread(n => n + 1)
+      }, 800)
+
+    } catch (error) {
+      console.error('Chatbot error:', error)
+      setTimeout(() => {
+        setTyping(false)
+        setMsgs(m => [...m, {
+          from: 'bot',
+          text: "I'm having trouble connecting right now. Please reach us directly on WhatsApp at +63 966 367 1854 or Instagram @notionnik.",
+        }])
+        if (!open) setUnread(n => n + 1)
+      }, 1000)
+    }
   }
+
+  const QUICK_QUESTIONS = ['What services do you offer?', 'How do I book a call?', 'Tell me about automation']
 
   return (
     <>
@@ -85,26 +113,34 @@ export default function Chatbot({ forceOpen, onOpened }) {
               </div>
             </div>
           ))}
-          {typing && (
-            <div className="flex justify-start">
-              <div className="bg-navy-700/80 border border-white/[0.07] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
-                {[0,1,2].map(i => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />
+
+          {/* Suggested questions — shown only before first user message */}
+          {showSuggestions && msgs.length === 1 && (
+            <div className="space-y-2 pt-1">
+              <p className="font-mono text-[9px] text-blue-300/40 tracking-widest text-center uppercase">Quick questions</p>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_QUESTIONS.map(q => (
+                  <button key={q} onClick={() => send(q)}
+                    className="text-[11px] font-mono font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-full hover:bg-brand-500/20 transition-colors text-left">
+                    {q}
+                  </button>
                 ))}
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Quick actions */}
-        <div className="px-4 pb-3 flex flex-wrap gap-1.5">
-          {['Services', 'Pricing', 'Book a Call'].map(q => (
-            <button key={q} onClick={() => { setInput(q); }}
-              className="text-[11px] font-mono font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-full hover:bg-brand-500/20 transition-colors">
-              {q}
-            </button>
-          ))}
+          {/* Typing indicator */}
+          {typing && (
+            <div className="flex justify-start">
+              <div className="bg-navy-700/80 border border-white/[0.07] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
+                {[0, 1, 2].map(i => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div ref={bottomRef} />
         </div>
 
         {/* Input */}
@@ -117,7 +153,11 @@ export default function Chatbot({ forceOpen, onOpened }) {
               placeholder="Ask about our services…"
               className="flex-1 bg-transparent text-sm text-white placeholder-blue-200/30 outline-none px-1"
             />
-            <button onClick={send} className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white hover:bg-brand-400 transition-colors flex-shrink-0">
+            <button
+              onClick={() => send()}
+              disabled={!input.trim() || typing}
+              className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white hover:bg-brand-400 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
               <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
