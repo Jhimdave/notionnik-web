@@ -94,54 +94,158 @@ function ServiceModal({ service, onClose }) {
 
 /* ── Contact form ──────────────────────────────────────────── */
 function ContactForm() {
-  const [form,    setForm]    = useState({ name:'', email:'', message:'' })
-  const [sent,    setSent]    = useState(false)
-  const [loading, setLoading] = useState(false)
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
 
-  const submit = async e => {
-    e.preventDefault()
-    setLoading(true)
-    await new Promise(r => setTimeout(r, 1100))
-    setSent(true)
-    setLoading(false)
-  }
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const inputCls = `w-full bg-navy-800/60 border border-white/[0.09] rounded-xl px-4 py-3 text-white text-sm placeholder-blue-200/25 outline-none transition-all duration-200 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 font-body`
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  if (sent) return (
-    <div className="text-center py-10">
-      <div className="w-14 h-14 rounded-full bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-2xl mx-auto mb-4">✓</div>
-      <h3 className="font-display text-xl font-bold text-white mb-2">Message sent!</h3>
-      <p className="text-blue-200/55 text-sm">We'll reply within 24 hours.</p>
-    </div>
-  )
+  const submit = async (e) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        "https://hook.eu1.make.com/t1net90pz4vat28sxaura2tb1x2qq47v",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+        }
+      );
+
+      if (!res.ok) throw new Error("Webhook failed");
+
+      setSent(true);
+
+      setForm({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } catch (err) {
+      console.error("Form submission error:", err);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputCls = `w-full bg-navy-800/60 border border-white/[0.09] rounded-xl px-4 py-3 text-white text-sm placeholder-blue-200/25 outline-none transition-all duration-200 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 font-body`;
+
+  if (sent)
+    return (
+      <div className="text-center py-10">
+        <div className="w-14 h-14 rounded-full bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-2xl mx-auto mb-4">
+          ✓
+        </div>
+        <h3 className="font-display text-xl font-bold text-white mb-2">
+          Message sent!
+        </h3>
+        <p className="text-blue-200/55 text-sm">
+          We'll reply within 24 hours.
+        </p>
+      </div>
+    );
 
   return (
     <form onSubmit={submit} className="space-y-4">
+
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
-          <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">Name *</label>
-          <input required value={form.name} onChange={e=>set('name',e.target.value)} placeholder="Your name" className={inputCls}/>
+          <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">
+            Name *
+          </label>
+          <input
+            required
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="Your name"
+            className={inputCls}
+          />
         </div>
+
         <div>
-          <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">Email *</label>
-          <input required type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" className={inputCls}/>
+          <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">
+            Email *
+          </label>
+          <input
+            required
+            type="email"
+            value={form.email}
+            onChange={(e) => set("email", e.target.value)}
+            placeholder="you@email.com"
+            className={inputCls}
+          />
         </div>
       </div>
+
       <div>
-        <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">Message *</label>
-        <textarea required value={form.message} onChange={e=>set('message',e.target.value)} rows={4}
-          placeholder="Tell us about your project or ask a question…"
-          className={`${inputCls} resize-y min-h-[100px]`}/>
+        <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">
+          Subject *
+        </label>
+        <input
+          required
+          value={form.subject}
+          onChange={(e) => set("subject", e.target.value)}
+          placeholder="Project inquiry / Automation help / Question"
+          className={inputCls}
+        />
       </div>
-      <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-3.5" style={{ opacity: loading ? 0.75 : 1 }}>
-        <span>{loading ? 'Sending…' : 'Send Message'}</span>
-        {!loading && (<svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>)}
+
+      <div>
+        <label className="block font-mono text-[10px] font-semibold tracking-widest text-blue-400/60 uppercase mb-2">
+          Message *
+        </label>
+        <textarea
+          required
+          value={form.message}
+          onChange={(e) => set("message", e.target.value)}
+          rows={4}
+          placeholder="Tell us about your project or ask a question…"
+          className={`${inputCls} resize-y min-h-[100px]`}
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full justify-center py-3.5"
+        style={{ opacity: loading ? 0.75 : 1 }}
+      >
+        <span>{loading ? "Sending…" : "Send Message"}</span>
+
+        {!loading && (
+          <svg
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M5 12h14M12 5l7 7-7 7"
+            />
+          </svg>
+        )}
       </button>
     </form>
-  )
+  );
 }
+
 
 const STATS = [
   { value: 50,  suffix: '+', label: 'Projects Completed' },
