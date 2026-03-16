@@ -31,29 +31,38 @@ function getAvatar(name, i) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=${color}`;
 }
 
-function parseMember(page) {
-  const props = page.properties;
-  const name =
-    props.Name?.title?.[0]?.plain_text ||
-    props.name?.title?.[0]?.plain_text ||
-    "Unknown";
-  const role =
-    props.Role?.rich_text?.[0]?.plain_text ||
-    props.role?.rich_text?.[0]?.plain_text ||
-    props.Role?.select?.name ||
-    props.role?.select?.name ||
-    "";
-  const description =
-    props.Description?.rich_text?.[0]?.plain_text ||
-    props.description?.rich_text?.[0]?.plain_text ||
-    props.Description?.rich_text?.map((r) => r.plain_text).join("") ||
-    "";
-  const imageFile = props.Image?.files?.[0] || props.image?.files?.[0];
-  const image =
-    imageFile?.type === "external"
-      ? imageFile.external.url
-      : imageFile?.file?.url || null;
-  return { name, role, description, image };
+// function parseMember(page) {
+//   const props = page.properties;
+//   const name =
+//     props.Name?.title?.[0]?.plain_text ||
+//     props.name?.title?.[0]?.plain_text ||
+//     "Unknown";
+//   const role =
+//     props.Role?.rich_text?.[0]?.plain_text ||
+//     props.role?.rich_text?.[0]?.plain_text ||
+//     props.Role?.select?.name ||
+//     props.role?.select?.name ||
+//     "";
+//   const description =
+//     props.Description?.rich_text?.[0]?.plain_text ||
+//     props.description?.rich_text?.[0]?.plain_text ||
+//     props.Description?.rich_text?.map((r) => r.plain_text).join("") ||
+//     "";
+//   const imageFile = props.Image?.files?.[0] || props.image?.files?.[0];
+//   const image =
+//     imageFile?.type === "external"
+//       ? imageFile.external.url
+//       : imageFile?.file?.url || null;
+//   return { name, role, description, image };
+// }
+
+function parseMember(page){
+  return {
+    name: page.name || 'Unknown',
+    role: page.role || "",
+    description : page.description | "",
+    image: page.image || null
+  };
 }
 
 const VALUES = [
@@ -234,7 +243,7 @@ export default function AboutUs() {
                 <div key={m.name + i} className="card-glass p-7 text-center">
                   <div
                     className="w-18 h-18 mx-auto rounded-full overflow-hidden border-2 border-brand-500/30 mb-4"
-                    style={{ width: 72, height: 72 }}
+                    style={{ width: 122, height: 122 }}
                   >
                     <img
                       src={m.img}
