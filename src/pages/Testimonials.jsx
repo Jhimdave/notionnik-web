@@ -94,7 +94,7 @@ function Modal({ t, onClose }) {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
       onClick={handleBackdrop}
     >
-      <div className="relative w-full max-w-lg bg-navy-900 border border-brand-500/20 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+      <div className="relative w-full max-w-3xl bg-navy-900 border border-brand-500/20 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
 
         {/* Close button */}
         <button
@@ -113,18 +113,14 @@ function Modal({ t, onClose }) {
 
         {/* Company & Project */}
         <div className="mt-5 mb-4 grid grid-cols-2 gap-3">
-          {t.company && (
-            <div className="bg-white/[0.05] rounded-xl px-4 py-3">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-blue-400/55 mb-1">Company</p>
-              <p className="text-white text-sm font-semibold">{t.company}</p>
-            </div>
-          )}
-          {t.projectTitle && (
-            <div className="bg-white/[0.05] rounded-xl px-4 py-3">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-blue-400/55 mb-1">Project</p>
-              <p className="text-white text-sm font-semibold">{t.projectTitle}</p>
-            </div>
-          )}
+          <div className="bg-white/[0.05] rounded-xl px-4 py-3">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-blue-400/55 mb-1">Company</p>
+            <p className="text-white text-sm font-semibold">{t.company || '—'}</p>
+          </div>
+          <div className="bg-white/[0.05] rounded-xl px-4 py-3">
+            <p className="font-mono text-[9px] uppercase tracking-widest text-blue-400/55 mb-1">Project</p>
+            <p className="text-white text-sm font-semibold">{t.projectTitle || '—'}</p>
+          </div>
         </div>
 
         {/* Raw Screenshot */}
