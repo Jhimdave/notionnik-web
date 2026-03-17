@@ -89,7 +89,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/" className="flex-shrink-0">
-          <Logo size={40} showText={true} />
+          <Logo size={40} showText={true} theme={isDark}/>
         </Link>
 
         {/* Desktop Nav */}

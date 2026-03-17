@@ -1,12 +1,13 @@
 export default function NotionNikLogo({
   size = 65,
   showText = true,
+  theme = true,
   className = "",
 }) {
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
       <img
-        src="/light-logo.png"
+        src= {theme ? "/light-logo.png" : "/logo.png"}
         alt="NotionNik Logo"
         style={{ height: size }}
         className="object-contain"

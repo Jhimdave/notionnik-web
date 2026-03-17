@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
+import { useTheme } from './ThemeContext'
+
 
 /* ── API Base ─────────────────────────────────────────────── */
 const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com'
@@ -335,6 +337,7 @@ export default function Dashboard() {
   const [servicesLoading, setServicesLoading] = useState(true)
   const [testimonials, setTestimonials] = useState([])
   const [testimonialsLoading, setTestimonialsLoading] = useState(true)
+  const { isDark } = useTheme()
 
   // Fetch services from backend
   useEffect(() => {
@@ -438,7 +441,7 @@ export default function Dashboard() {
               <div className="absolute w-[200px] h-[200px] rounded-full bg-brand-500/10 animate-[pulseRing_3s_ease-out_infinite]" />
               <div className="absolute w-[200px] h-[200px] rounded-full bg-brand-500/10 animate-[pulseRing_3s_ease-out_1s_infinite]" />
               <div className="relative z-10 animate-float bg-navy-800/80 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-brand">
-                <Logo size={80} showText={false} />
+                <Logo size={80} showText={false} theme = {isDark}/>
               </div>
               {[
                 { angle: 0,   label: 'Notion',     icon: '◈', delay: '0s'   },
@@ -468,7 +471,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {STATS.map(s => (
               <div key={s.label} className="text-center reveal">
-                <div className="font-display text-4xl md:text-5xl font-extrabold mb-2" style={{ background:'linear-gradient(135deg,#fff,#5aabff)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+                <div className="font-display text-4xl md:text-5xl font-extrabold mb-2" style={{ background:'linear-gradient(135deg,#fff,#5aabff)', WebkitBackgroundClip:'text', WebkitTextFillColor: '#2d8ef5', backgroundClip:'text' }}>
                   <Counter target={s.value} suffix={s.suffix}/>
                 </div>
                 <p className="font-mono text-[11px] tracking-widest uppercase text-blue-400/60">{s.label}</p>

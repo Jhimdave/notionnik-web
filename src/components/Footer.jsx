@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from './Logo'
+import { useTheme } from '../pages/ThemeContext'
 
 const SOCIALS = [
   {
@@ -84,6 +85,7 @@ function PrivacyModal({ onClose }) {
 
 export default function Footer() {
   const [privacy, setPrivacy] = useState(false)
+  const { isDark } = useTheme()
 
   return (
     <>
@@ -96,7 +98,7 @@ export default function Footer() {
 
             {/* Brand */}
             <div className="lg:col-span-1">
-              <Logo size={40} showText={true} className="mb-5" />
+              <Logo size={40} showText={true} className="mb-5" theme = { isDark }/>
               <p className="text-blue-200/55 text-[13.5px] leading-relaxed mb-5 max-w-[230px]">
                 We build smart Notion systems and automation workflows that save time and scale your business.
               </p>
