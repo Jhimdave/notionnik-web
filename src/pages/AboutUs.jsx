@@ -60,7 +60,7 @@ function parseMember(page){
   return {
     name: page.name || 'Unknown',
     role: page.role || "",
-    description : page.description | "",
+    description : page.description || "",
     image: page.image || null
   };
 }
