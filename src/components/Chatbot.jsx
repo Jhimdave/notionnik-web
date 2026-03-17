@@ -7,6 +7,17 @@ const BOT_RESPONSES = {
   default: "Hi! I'm NotionBot 🤖 I can help answer questions about our services. What would you like to know?",
 }
 
+// Parses **bold** markdown and returns an array of React nodes
+function parseBold(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>
+    }
+    return part
+  })
+}
+
 export default function Chatbot({ forceOpen, onOpened }) {
   const [open,           setOpen]           = useState(false)
   const [msgs,           setMsgs]           = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
@@ -17,13 +28,20 @@ export default function Chatbot({ forceOpen, onOpened }) {
   const [showSuggestions,setShowSuggestions]= useState(true)
   const bottomRef = useRef(null)
 
-  // Allow external open (peeping robot)
+  // Allow external open
   useEffect(() => {
-    if (forceOpen) { setOpen(true); setUnread(0); if (onOpened) onOpened() }
+    if (forceOpen) {
+      setOpen(true)
+      setUnread(0)
+      if (onOpened) onOpened()
+    }
   }, [forceOpen])
 
   useEffect(() => {
-    if (open) { setUnread(0); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }
+    if (open) {
+      setUnread(0)
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [open, msgs])
 
   const send = async (overrideText) => {
@@ -51,10 +69,11 @@ export default function Chatbot({ forceOpen, onOpened }) {
 
       const data = await response.json()
 
-      // Persist conversation ID for follow-up messages
-      if (data.conversationId) setConversationId(data.conversationId)
+      const convId = data.conversationID || data.conversationId
+      if (convId) setConversationId(convId)
 
       const reply =
+        data.response ||
         data.reply ||
         "Thanks for your message! Our team will get back to you shortly. You can also reach us on WhatsApp at +63 966 367 1854."
 
@@ -66,6 +85,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
 
     } catch (error) {
       console.error('Chatbot error:', error)
+
       setTimeout(() => {
         setTyping(false)
         setMsgs(m => [...m, {
@@ -77,7 +97,11 @@ export default function Chatbot({ forceOpen, onOpened }) {
     }
   }
 
-  const QUICK_QUESTIONS = ['What services do you offer?', 'How do I book a call?', 'Tell me about automation']
+  const QUICK_QUESTIONS = [
+    'What services do you offer?',
+    'How do I book a call?',
+    'Tell me about automation'
+  ]
 
   return (
     <>
@@ -87,6 +111,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
         transition-all duration-300 origin-bottom-right
         ${open ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}
       `}>
+
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/[0.07] bg-navy-800/60 rounded-t-2xl">
           <div className="w-9 h-9 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-lg">🤖</div>
@@ -97,7 +122,11 @@ export default function Chatbot({ forceOpen, onOpened }) {
               <span className="font-mono text-[10px] text-emerald-400">Online · Usually replies instantly</span>
             </div>
           </div>
-          <button onClick={() => setOpen(false)} className="ml-auto w-7 h-7 rounded-lg bg-navy-700 border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-white text-xs transition-colors">✕</button>
+          <button
+            onClick={() => setOpen(false)}
+            className="ml-auto w-7 h-7 rounded-lg bg-navy-700 border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-white text-xs transition-colors">
+            ✕
+          </button>
         </div>
 
         {/* Messages */}
@@ -109,18 +138,22 @@ export default function Chatbot({ forceOpen, onOpened }) {
                   ? 'bg-brand-500 text-white rounded-br-sm'
                   : 'bg-navy-700/80 text-blue-100/90 border border-white/[0.07] rounded-bl-sm'
                 }`}>
-                {m.text}
+                {parseBold(m.text)}
               </div>
             </div>
           ))}
 
-          {/* Suggested questions — shown only before first user message */}
+          {/* Suggestions */}
           {showSuggestions && msgs.length === 1 && (
             <div className="space-y-2 pt-1">
-              <p className="font-mono text-[9px] text-blue-300/40 tracking-widest text-center uppercase">Quick questions</p>
+              <p className="font-mono text-[9px] text-blue-300/40 tracking-widest text-center uppercase">
+                Quick questions
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {QUICK_QUESTIONS.map(q => (
-                  <button key={q} onClick={() => send(q)}
+                  <button
+                    key={q}
+                    onClick={() => send(q)}
                     className="text-[11px] font-mono font-medium text-brand-400 bg-brand-500/10 border border-brand-500/20 px-2.5 py-1 rounded-full hover:bg-brand-500/20 transition-colors text-left">
                     {q}
                   </button>
@@ -129,12 +162,16 @@ export default function Chatbot({ forceOpen, onOpened }) {
             </div>
           )}
 
-          {/* Typing indicator */}
+          {/* Typing */}
           {typing && (
             <div className="flex justify-start">
               <div className="bg-navy-700/80 border border-white/[0.07] rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
                 {[0, 1, 2].map(i => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
                 ))}
               </div>
             </div>
@@ -158,25 +195,21 @@ export default function Chatbot({ forceOpen, onOpened }) {
               disabled={!input.trim() || typing}
               className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white hover:bg-brand-400 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
+              ➤
             </button>
           </div>
         </div>
       </div>
 
-      {/* FAB */}
+      {/* Floating Button */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="fixed bottom-7 right-5 md:right-8 z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-navy-700 border border-brand-500/40 shadow-brand flex items-center justify-center transition-all duration-200 hover:scale-110 hover:shadow-brand-lg"
+        className="fixed bottom-7 right-5 md:right-8 z-50 w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500 to-navy-700 border border-brand-500/40 shadow-brand flex items-center justify-center transition-all duration-200 hover:scale-110"
       >
-        {open
-          ? <svg width="18" height="18" fill="none" stroke="white" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          : <svg width="20" height="20" fill="none" stroke="white" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
-        }
+        {open ? '✕' : '💬'}
+
         {!open && unread > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 border-2 border-navy-950 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
             {unread}
           </span>
         )}
