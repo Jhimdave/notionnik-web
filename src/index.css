@@ -104,96 +104,105 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   LIGHT MODE — Very light blue, dark navy text, brand blue accents
-   Matches logo: light gray-blue bg (#ebebeb) + navy #1a2d5a + blue #2d8ef5
+   LIGHT MODE — Palette: #021024 · #052659 · #5483B3 · #7DA0CA · #C1E8FF
+   Background: light blue (#C1E8FF family)
+   Text:       deep navy (#021024 / #052659)
+   Accents:    mid blue (#5483B3)
+   Cards:      semi-transparent white over light blue bg
    ══════════════════════════════════════════════════════════════════ */
 
 /* ── Body ──────────────────────────────────────────────────────── */
 .light body {
-  background: #eaf4fb;
-  color: #1a2d5a;
+  background: #c1e8ff;
+  color: #021024;
 }
 
 /* ── Scrollbar ─────────────────────────────────────────────────── */
-.light ::-webkit-scrollbar-track { background: #d8ecf7; }
-.light ::-webkit-scrollbar-thumb { background: #a0c8e0; border-radius: 3px; }
-.light ::-webkit-scrollbar-thumb:hover { background: #2d8ef5; }
+.light ::-webkit-scrollbar-track { background: #b0dcf5; }
+.light ::-webkit-scrollbar-thumb { background: #7da0ca; border-radius: 3px; }
+.light ::-webkit-scrollbar-thumb:hover { background: #5483b3; }
 
-/* ── Navy surface overrides (bg utility classes) ────────────────── */
-.light [class*="bg-navy-950"] { background: rgba(210,238,252,0.97) !important; }
-.light [class*="bg-navy-900"] { background: rgba(255,255,255,0.88) !important; }
-.light [class*="bg-navy-800"] { background: rgba(228,242,251,0.90) !important; }
-.light [class*="bg-navy-700"] { background: rgba(214,235,248,0.92) !important; }
-.light [class*="bg-navy-600"] { background: rgba(198,228,245,0.90) !important; }
+/* ── Navy surface overrides ─────────────────────────────────────── */
+.light [class*="bg-navy-950"] { background: rgba(175,216,247,0.97) !important; }
+.light [class*="bg-navy-900"] { background: rgba(255,255,255,0.60) !important; }
+.light [class*="bg-navy-800"] { background: rgba(255,255,255,0.48) !important; }
+.light [class*="bg-navy-700"] { background: rgba(255,255,255,0.40) !important; }
+.light [class*="bg-navy-600"] { background: rgba(255,255,255,0.32) !important; }
+
+/* Section strip — alt bg using palette mid tones */
+.light .bg-navy-900\/30 {
+  background: rgba(125,160,202,0.18) !important;
+}
 
 /* ── Card glass ─────────────────────────────────────────────────── */
 .light .card-glass {
-  background: rgba(255,255,255,0.85) !important;
-  border-color: rgba(45,142,245,0.13) !important;
-  box-shadow: 0 2px 16px rgba(26,45,90,0.07);
-  backdrop-filter: blur(16px);
+  background: rgba(255,255,255,0.55) !important;
+  border-color: rgba(5,38,89,0.10) !important;
+  box-shadow: 0 2px 20px rgba(2,16,36,0.07), 0 0 0 1px rgba(255,255,255,0.6) inset;
+  backdrop-filter: blur(18px);
 }
 .light .card-glass:hover {
-  border-color: rgba(45,142,245,0.30) !important;
-  box-shadow: 0 8px 32px rgba(45,142,245,0.12);
+  background: rgba(255,255,255,0.70) !important;
+  border-color: rgba(84,131,179,0.28) !important;
+  box-shadow: 0 8px 32px rgba(5,38,89,0.12), 0 0 0 1px rgba(255,255,255,0.7) inset;
 }
 
-/* ── Section gradient BG (from-navy-X to-navy-X) ─────────────────
-   Override Tailwind CSS custom properties for gradient-from / gradient-to.
-   We scope to rounded-3xl/rounded-2xl containers (CTAs, featured cards)
-   to avoid affecting small elements like process step circles.       */
+/* ── Section gradient bg (CTA sections, featured cards) ────────── */
 .light .rounded-3xl[class*="from-navy-"],
 .light .rounded-3xl[class*="to-navy-"] {
-  background: linear-gradient(135deg, #f0f8ff, #daeef7) !important;
+  background: linear-gradient(135deg, rgba(255,255,255,0.65), rgba(193,232,255,0.80)) !important;
   background-image: none !important;
+  border-color: rgba(84,131,179,0.18) !important;
 }
 .light .rounded-2xl[class*="from-navy-"]:not(.card-glass):not([class*="bg-brand"]) {
-  background: rgba(228,242,251,0.90) !important;
+  background: rgba(255,255,255,0.45) !important;
   background-image: none !important;
-}
-
-/* ── Section background blocks (py-X bg-navy-900/30 type) ────────── */
-.light .bg-navy-900\/30 { background: rgba(220,241,253,0.60) !important; }
-.light .bg-navy-900\/30.border-y { 
-  border-top-color: rgba(45,142,245,0.10) !important;
-  border-bottom-color: rgba(45,142,245,0.10) !important;
 }
 
 /* ── Borders ───────────────────────────────────────────────────── */
 .light [class*="border-white/"] {
-  border-color: rgba(45,142,245,0.11) !important;
+  border-color: rgba(5,38,89,0.09) !important;
 }
 .light [class*="border-brand-500"] {
-  border-color: rgba(45,142,245,0.26) !important;
+  border-color: rgba(84,131,179,0.28) !important;
 }
-.light .border-b { border-bottom-color: rgba(45,142,245,0.10) !important; }
-.light .border-t { border-top-color: rgba(45,142,245,0.10) !important; }
+.light .border-b { border-bottom-color: rgba(5,38,89,0.08) !important; }
+.light .border-t { border-top-color: rgba(5,38,89,0.08) !important; }
+.light .border-y {
+  border-top-color: rgba(5,38,89,0.08) !important;
+  border-bottom-color: rgba(5,38,89,0.08) !important;
+}
 
 /* ── Typography ────────────────────────────────────────────────── */
-.light .text-white          { color: #1a2d5a !important; }
+/* Primary text → deepest palette navy */
+.light .text-white         { color: #021024 !important; }
 .light h1.text-white,
 .light h2.text-white,
 .light h3.text-white,
-.light h4.text-white        { color: #1a2d5a !important; }
+.light h4.text-white       { color: #021024 !important; }
 
-.light [class*="text-blue-100"] { color: rgba(26,45,90,0.82) !important; }
-.light [class*="text-blue-200"] { color: rgba(26,45,90,0.65) !important; }
-.light [class*="text-blue-300"] { color: rgba(45,142,245,0.80) !important; }
-.light [class*="text-blue-400"] { color: rgba(45,142,245,0.90) !important; }
+/* Secondary text → #052659 */
+.light [class*="text-blue-100"] { color: rgba(5,38,89,0.80) !important; }
+.light [class*="text-blue-200"] { color: rgba(5,38,89,0.62) !important; }
 
+/* Muted/accent text → #5483B3 */
+.light [class*="text-blue-300"] { color: rgba(84,131,179,0.85) !important; }
+.light [class*="text-blue-400"] { color: rgba(84,131,179,0.95) !important; }
+
+/* Brand accent → #052659 */
 .light .text-brand-400,
-.light [class*="text-brand-4"] { color: #1a5fc0 !important; }
-.light .text-brand-300         { color: #2d8ef5 !important; }
+.light [class*="text-brand-4"] { color: #052659 !important; }
+.light .text-brand-300         { color: #5483b3 !important; }
 
-/* ── Gradient text ─────────────────────────────────────────────── */
+/* ── Gradient texts ─────────────────────────────────────────────── */
 .light .gradient-text {
-  background: linear-gradient(135deg, #1a2d5a 0%, #1a5fc0 55%, #2d8ef5 100%) !important;
+  background: linear-gradient(135deg, #021024 0%, #052659 55%, #5483b3 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
 }
 .light .gradient-text-blue {
-  background: linear-gradient(135deg, #1a5fc0 0%, #2d8ef5 100%) !important;
+  background: linear-gradient(135deg, #052659 0%, #5483b3 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -201,7 +210,7 @@ body {
 
 /* ── Stat number ────────────────────────────────────────────────── */
 .light .stat-number {
-  background: linear-gradient(135deg, #1a2d5a, #2d8ef5) !important;
+  background: linear-gradient(135deg, #021024 0%, #052659 60%, #5483b3 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -209,35 +218,39 @@ body {
 
 /* ── Pill & Tag ─────────────────────────────────────────────────── */
 .light .pill, .light .tag {
-  background: rgba(45,142,245,0.10) !important;
-  color: #1a5fc0 !important;
-  border-color: rgba(45,142,245,0.24) !important;
+  background: rgba(5,38,89,0.10) !important;
+  color: #052659 !important;
+  border-color: rgba(84,131,179,0.28) !important;
 }
 
 /* ── Section label ──────────────────────────────────────────────── */
-.light .section-label         { color: #2d8ef5 !important; }
-.light .section-label::before { background: #2d8ef5 !important; }
+.light .section-label         { color: #5483b3 !important; }
+.light .section-label::before { background: #5483b3 !important; }
 
 /* ── Glow divider ───────────────────────────────────────────────── */
 .light .glow-divider {
-  background: linear-gradient(90deg, transparent, rgba(45,142,245,0.28), transparent) !important;
+  background: linear-gradient(90deg, transparent, rgba(84,131,179,0.35), transparent) !important;
 }
 
 /* ── Buttons ───────────────────────────────────────────────────── */
 .light .btn-primary {
-  background: linear-gradient(135deg, #2d8ef5 0%, #1a5fc0 100%) !important;
-  color: #ffffff !important;
-  border-color: rgba(45,142,245,0.35) !important;
+  background: linear-gradient(135deg, #052659 0%, #021024 100%) !important;
+  color: #c1e8ff !important;
+  border-color: rgba(5,38,89,0.40) !important;
+}
+.light .btn-primary:hover {
+  background: linear-gradient(135deg, #5483b3 0%, #052659 100%) !important;
+  box-shadow: 0 8px 28px rgba(84,131,179,0.35) !important;
 }
 .light .btn-ghost {
-  color: #1a5fc0 !important;
-  border-color: rgba(26,45,90,0.18) !important;
-  background: transparent !important;
+  color: #052659 !important;
+  border-color: rgba(5,38,89,0.18) !important;
+  background: rgba(255,255,255,0.40) !important;
 }
 .light .btn-ghost:hover {
-  background: rgba(45,142,245,0.08) !important;
-  border-color: rgba(45,142,245,0.35) !important;
-  color: #1a2d5a !important;
+  background: rgba(255,255,255,0.65) !important;
+  border-color: rgba(84,131,179,0.40) !important;
+  color: #021024 !important;
 }
 
 /* ── Status / badges ────────────────────────────────────────────── */
@@ -245,79 +258,72 @@ body {
   background: #22c55e !important;
   box-shadow: 0 0 7px rgba(34,197,94,0.55) !important;
 }
-.light [class*="bg-emerald-400/10"] { background: rgba(34,197,94,0.10) !important; }
-.light [class*="bg-emerald-400\/10"] { background: rgba(34,197,94,0.10) !important; }
-.light [class*="border-emerald-400/20"] { border-color: rgba(34,197,94,0.22) !important; }
-.light [class*="border-emerald-400\/20"] { border-color: rgba(34,197,94,0.22) !important; }
-.light [class*="text-emerald-400"] { color: #16a34a !important; }
-
-/* Outcome/result emerald boxes */
-.light [class*="bg-emerald-400/\[0"] { background: rgba(34,197,94,0.08) !important; }
-.light [class*="border-emerald-400/15"] { border-color: rgba(34,197,94,0.18) !important; }
-.light [class*="text-emerald-4"] { color: #16a34a !important; }
+.light [class*="bg-emerald-400/10"],
+.light [class*="bg-emerald-400\/10"]  { background: rgba(34,197,94,0.12) !important; }
+.light [class*="border-emerald-400/"] { border-color: rgba(34,197,94,0.25) !important; }
+.light [class*="text-emerald-4"]      { color: #15803d !important; }
+.light [class*="bg-emerald-400/\[0"]  { background: rgba(34,197,94,0.09) !important; }
+.light [class*="border-emerald-400/15"] { border-color: rgba(34,197,94,0.20) !important; }
 
 /* ── Forms ──────────────────────────────────────────────────────── */
 .light input, .light textarea, .light select {
-  background: rgba(255,255,255,0.92) !important;
-  border-color: rgba(45,142,245,0.18) !important;
-  color: #1a2d5a !important;
+  background: rgba(255,255,255,0.72) !important;
+  border-color: rgba(5,38,89,0.14) !important;
+  color: #021024 !important;
 }
 .light input::placeholder, .light textarea::placeholder {
-  color: rgba(26,45,90,0.35) !important;
+  color: rgba(5,38,89,0.32) !important;
 }
 .light input:focus, .light textarea:focus, .light select:focus {
-  border-color: #2d8ef5 !important;
-  box-shadow: 0 0 0 3px rgba(45,142,245,0.12) !important;
+  border-color: #5483b3 !important;
+  box-shadow: 0 0 0 3px rgba(84,131,179,0.14) !important;
   outline: none !important;
+  background: rgba(255,255,255,0.88) !important;
 }
 
 /* ── Skeleton ────────────────────────────────────────────────────  */
 .light .skeleton {
-  background: linear-gradient(90deg, #cce5f4 0%, #dff0fa 50%, #cce5f4 100%) !important;
+  background: linear-gradient(90deg, rgba(125,160,202,0.25) 0%, rgba(255,255,255,0.55) 50%, rgba(125,160,202,0.25) 100%) !important;
   background-size: 200% 100% !important;
 }
 
-/* ── Pagination / brand bg tints ────────────────────────────────── */
-.light [class*="bg-brand-500/20"] { background: rgba(45,142,245,0.14) !important; }
-.light [class*="bg-brand-500/15"] { background: rgba(45,142,245,0.10) !important; }
-.light [class*="bg-brand-500/12"] { background: rgba(45,142,245,0.09) !important; }
-.light [class*="bg-brand-500/10"] { background: rgba(45,142,245,0.08) !important; }
+/* ── Brand bg tints (pagination, chips) ─────────────────────────── */
+.light [class*="bg-brand-500/20"] { background: rgba(84,131,179,0.18) !important; }
+.light [class*="bg-brand-500/15"] { background: rgba(84,131,179,0.14) !important; }
+.light [class*="bg-brand-500/12"] { background: rgba(84,131,179,0.11) !important; }
+.light [class*="bg-brand-500/10"] { background: rgba(84,131,179,0.09) !important; }
 
 /* ── Tool chips / mono badges ────────────────────────────────────── */
-.light [class*="bg-navy-700/60"] { background: rgba(200,228,244,0.90) !important; }
-.light [class*="text-blue-300/50"] { color: rgba(26,45,90,0.48) !important; }
-.light [class*="text-blue-300/70"] { color: rgba(26,45,90,0.60) !important; }
-.light [class*="text-blue-200/50"] { color: rgba(26,45,90,0.52) !important; }
-.light [class*="text-blue-200/70"] { color: rgba(26,45,90,0.68) !important; }
-.light [class*="text-blue-400/60"] { color: rgba(45,142,245,0.90) !important; }
-.light [class*="text-blue-400/50"] { color: rgba(45,142,245,0.85) !important; }
-.light [class*="text-blue-400/40"] { color: rgba(45,142,245,0.75) !important; }
-.light [class*="text-blue-400/55"] { color: rgba(45,142,245,0.88) !important; }
+.light [class*="bg-navy-700/60"] { background: rgba(125,160,202,0.25) !important; }
+.light [class*="text-blue-300/50"] { color: rgba(5,38,89,0.45) !important; }
+.light [class*="text-blue-300/70"] { color: rgba(5,38,89,0.58) !important; }
+.light [class*="text-blue-200/50"] { color: rgba(5,38,89,0.50) !important; }
+.light [class*="text-blue-200/70"] { color: rgba(5,38,89,0.65) !important; }
+.light [class*="text-blue-400/60"] { color: rgba(84,131,179,0.95) !important; }
+.light [class*="text-blue-400/50"] { color: rgba(84,131,179,0.85) !important; }
+.light [class*="text-blue-400/40"] { color: rgba(84,131,179,0.75) !important; }
+.light [class*="text-blue-400/55"] { color: rgba(84,131,179,0.90) !important; }
 
 /* ── Backdrop blur panels ────────────────────────────────────────── */
-.light .backdrop-blur-xl { background: rgba(234,248,253,0.90) !important; }
+.light .backdrop-blur-xl {
+  background: rgba(193,232,255,0.88) !important;
+}
 
-/* ── Links ──────────────────────────────────────────────────────── */
-.light a:not([class*="btn"]):not([class*="card-glass"]) { color: #1a5fc0; }
-.light a:not([class*="btn"]):not([class*="card-glass"]):hover { color: #1a2d5a; }
-
-/* ── Filter/sticky bars ─────────────────────────────────────────── */
-.light .sticky { 
-  background: rgba(234,248,253,0.96) !important;
+/* ── Sticky filter / nav bars ───────────────────────────────────── */
+.light .sticky {
+  background: rgba(175,216,247,0.94) !important;
   backdrop-filter: blur(20px) !important;
 }
-.light .sticky .border-b { border-bottom-color: rgba(45,142,245,0.12) !important; }
+.light .sticky .border-b { border-bottom-color: rgba(5,38,89,0.09) !important; }
 
-/* ── Modal backdrops ─────────────────────────────────────────────── */
-.light .fixed.inset-0.z-\[90\] > div:first-child,
-.light .fixed.inset-0.z-50 > div:first-child {
-  background: rgba(26,45,90,0.40) !important;
-}
+/* ── Links ──────────────────────────────────────────────────────── */
+.light a:not([class*="btn"]):not([class*="card-glass"]) { color: #052659; }
+.light a:not([class*="btn"]):not([class*="card-glass"]):hover { color: #021024; }
 
 /* ── Red error boxes ─────────────────────────────────────────────── */
-.light [class*="bg-red-500/10"] { background: rgba(239,68,68,0.08) !important; }
-.light [class*="border-red-500/20"] { border-color: rgba(239,68,68,0.20) !important; }
-.light [class*="text-red-300"] { color: #dc2626 !important; }
+.light [class*="bg-red-500/10"]     { background: rgba(239,68,68,0.09) !important; }
+.light [class*="border-red-500/20"] { border-color: rgba(239,68,68,0.22) !important; }
+.light [class*="text-red-300"]      { color: #b91c1c !important; }
 
 /* ── Global cursor ───────────────────────────────────────────────── */
 @media (pointer: fine) {

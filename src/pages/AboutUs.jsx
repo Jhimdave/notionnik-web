@@ -56,12 +56,12 @@ function getAvatar(name, i) {
 //   return { name, role, description, image };
 // }
 
-function parseMember(page){
+function parseMember(page) {
   return {
-    name: page.name || 'Unknown',
+    name: page.name || "Unknown",
     role: page.role || "",
-    description : page.description || "",
-    image: page.image || null
+    description: page.description || "",
+    image: page.image || null,
   };
 }
 
@@ -262,8 +262,8 @@ export default function AboutUs() {
                   </span>
 
                   {m.description && (
-                    <p className="text-blue-200/50 text-xs leading-relaxed mt-2">
-                      {m.description}
+                    <p className="text-blue-300/80 text-sm italic leading-6 mt-2 text-center">
+                      “ {m.description} ”
                     </p>
                   )}
                 </div>
