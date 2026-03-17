@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
-import { CASE_STUDIES, SERVICES_DATA } from '../data'
+
+/* ── API Base ─────────────────────────────────────────────── */
+const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com'
 
 /* ── Reveal on scroll ──────────────────────────────────────── */
 function useReveal() {
@@ -55,31 +57,33 @@ function ServiceModal({ service, onClose }) {
       <div className="relative w-full max-w-lg max-h-[85vh] flex flex-col bg-navy-900 border border-brand-500/25 rounded-3xl shadow-brand-lg overflow-hidden">
         <div className="flex items-start justify-between p-7 pb-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-2xl font-mono text-brand-400">{service.icon}</div>
+            <div className="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-2xl font-mono text-brand-400">{service.icon || '◈'}</div>
             <div>
               <h2 className="font-display font-bold text-white text-xl">{service.title}</h2>
-              <p className="text-brand-400/70 text-xs font-mono mt-0.5">{service.tagline}</p>
+              <p className="text-brand-400/70 text-xs font-mono mt-0.5">{service.tagline || 'Professional Service'}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-xl bg-navy-700 border border-white/10 flex items-center justify-center text-blue-200/50 hover:text-white text-sm transition-colors flex-shrink-0">✕</button>
         </div>
         <div className="overflow-y-auto p-7 space-y-5">
-          <p className="text-blue-100/75 leading-relaxed">{service.long}</p>
-          <div>
-            <p className="font-mono text-[10px] font-semibold tracking-widest text-brand-400/70 uppercase mb-3">What's included</p>
-            <div className="grid grid-cols-2 gap-2">
-              {service.features.map(f => (
-                <div key={f} className="flex items-center gap-2.5 bg-navy-800/50 rounded-xl px-3.5 py-2.5">
-                  <div className="w-4 h-4 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center flex-shrink-0">
-                    <svg width="7" height="7" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#2d8ef5" strokeWidth={2} strokeLinecap="round"/></svg>
+          <p className="text-blue-100/75 leading-relaxed">{service.desc || service.description || 'Professional service tailored to your workflow.'}</p>
+          {service.features && service.features.length > 0 && (
+            <div>
+              <p className="font-mono text-[10px] font-semibold tracking-widest text-brand-400/70 uppercase mb-3">What's included</p>
+              <div className="grid grid-cols-2 gap-2">
+                {service.features.map(f => (
+                  <div key={f} className="flex items-center gap-2.5 bg-navy-800/50 rounded-xl px-3.5 py-2.5">
+                    <div className="w-4 h-4 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center flex-shrink-0">
+                      <svg width="7" height="7" viewBox="0 0 12 10" fill="none"><path d="M1 5l3.5 3.5L11 1" stroke="#2d8ef5" strokeWidth={2} strokeLinecap="round"/></svg>
+                    </div>
+                    <span className="text-blue-100/70 text-xs">{f}</span>
                   </div>
-                  <span className="text-blue-100/70 text-xs">{f}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex flex-wrap gap-2">
-            {service.tools.map(t => (
+            {(service.tools || []).map(t => (
               <span key={t} className="font-mono text-[11px] text-blue-300/70 bg-navy-800/70 border border-white/[0.08] px-3 py-1.5 rounded-lg">{t}</span>
             ))}
           </div>
@@ -246,18 +250,11 @@ function ContactForm() {
   );
 }
 
-
 const STATS = [
   { value: 50,  suffix: '+', label: 'Projects Completed' },
   { value: 30,  suffix: '+', label: 'Happy Clients'      },
   { value: 100, suffix: '%', label: 'Automation Rate'    },
   { value: 3,   suffix: 'yr', label: 'Experience'        },
-]
-
-const TESTIMONIALS_PREVIEW = [
-  { name:'Alex Carter',  role:'Founder, CartFlow',     avatar:'AC', text:'NotionNik completely transformed how our team operates. We\'re saving 15+ hours a week with their Notion and automation system.' },
-  { name:'Jordan Reyes', role:'CEO, Reyes Digital',    avatar:'JR', text:'The ROI in the first month was unreal. My automation pipeline handles everything from lead capture to invoicing.' },
-  { name:'Kim Larsson',  role:'Operations Lead',       avatar:'KL', text:'Reports that took 3 hours now generate automatically every Monday. The Google Workspace automation is incredible.' },
 ]
 
 const PROCESS = [
@@ -267,12 +264,123 @@ const PROCESS = [
   { step: '04', title: 'Handover',   desc: 'Full training, docs, and 30-day support.' },
 ]
 
+// Helper to parse Notion service data
+function parseService(page) {
+  const props = page.properties || {}
+  const title = props.Title?.title?.[0]?.plain_text || props.title?.title?.[0]?.plain_text || 'Untitled'
+  const desc = props['Service Description']?.rich_text?.map(r => r.plain_text).join('') || props.description?.rich_text?.map(r => r.plain_text).join('') || ''
+  const icon = page.icon?.emoji || '◈'
+  const logoFile = props.Logo?.files?.[0] || props.logo?.files?.[0]
+  const logo = logoFile?.type === 'external' ? logoFile.external.url : logoFile?.file?.url || null
+  
+  // Extract features if available
+  const features = props.Features?.multi_select?.map(f => f.name) || 
+                   props.features?.rich_text?.map(r => r.plain_text).join('').split(',').map(f => f.trim()).filter(Boolean) ||
+                   []
+  
+  // Extract tools if available
+  const tools = props.Tools?.multi_select?.map(t => t.name) || 
+                props.tools?.rich_text?.map(r => r.plain_text).join('').split(',').map(t => t.trim()).filter(Boolean) ||
+                []
+  
+  const tagline = props.Tagline?.rich_text?.[0]?.plain_text || props.tagline?.rich_text?.[0]?.plain_text || 'Professional Service'
+  
+  return { title, desc, icon, logo, id: page.id, features, tools, tagline }
+}
+
+// Helper to determine service type for testimonials
+function getServiceType(tools) {
+  if (!tools || tools.length === 0) return null;
+  
+  const normalizedTools = tools.map(t => t.toLowerCase());
+  const isOnlyNotion = normalizedTools.length === 1 && normalizedTools[0] === "notion";
+  
+  if (isOnlyNotion) {
+    return { label: "Notion Setup", isAutomation: false };
+  }
+  
+  const automationKeywords = ["make", "make.com", "n8n", "apps script", "appscript", "zapier", "automation"];
+  const hasAutomation = normalizedTools.some(tool => 
+    automationKeywords.some(keyword => tool.includes(keyword))
+  );
+  
+  if (hasAutomation || tools.length > 1) {
+    return { label: "Automation", isAutomation: true };
+  }
+  
+  return { label: tools[0], isAutomation: false };
+}
+
+// Helper to format client info line
+function getClientInfoLine(role, company) {
+  const hasRole = role && role.trim() !== "";
+  const hasCompany = company && company.trim() !== "";
+  
+  if (hasRole && hasCompany) {
+    return `${role}, ${company}`;
+  } else if (hasRole) {
+    return role;
+  } else if (hasCompany) {
+    return company;
+  }
+  return "";
+}
+
 export default function Dashboard() {
   useReveal()
   const [selectedService, setSelectedService] = useState(null)
+  
+  // Backend data states
+  const [services, setServices] = useState([])
+  const [servicesLoading, setServicesLoading] = useState(true)
+  const [testimonials, setTestimonials] = useState([])
+  const [testimonialsLoading, setTestimonialsLoading] = useState(true)
 
-  const previewServices = SERVICES_DATA.slice(0, 3)
-  const previewCases    = CASE_STUDIES.slice(0, 3)
+  // Fetch services from backend
+  useEffect(() => {
+    fetch(`${API_BASE}/api/notion-services`)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
+      .then(d => {
+        const parsedServices = (d.results || []).map(parseService)
+        setServices(parsedServices.slice(0, 3)) // Preview first 3
+      })
+      .catch(err => {
+        console.error('Services fetch error:', err)
+        setServices([])
+      })
+      .finally(() => setServicesLoading(false))
+  }, [])
+
+  // Fetch testimonials from backend
+  useEffect(() => {
+    fetch(`${API_BASE}/api/testimonials`)
+      .then(async (r) => {
+        const text = await r.text()
+        try {
+          const json = JSON.parse(text)
+          return json
+        } catch (err) {
+          return null
+        }
+      })
+      .then((res) => {
+        if (res?.success) {
+          setTestimonials(res.data.slice(0, 3)) // Preview first 3
+        } else {
+          setTestimonials([])
+        }
+      })
+      .catch((err) => {
+        console.error("Testimonials fetch error:", err)
+        setTestimonials([])
+      })
+      .finally(() => {
+        setTestimonialsLoading(false)
+      })
+  }, [])
+
+  const previewServices = services.slice(0, 3)
+  const previewTestimonials = testimonials.slice(0, 3)
 
   return (
     <main>
@@ -370,7 +478,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── SERVICES PREVIEW ────────────────────────────────────── */}
+      {/* ── SERVICES PREVIEW (from backend) ─────────────────────── */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
@@ -384,18 +492,34 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {previewServices.map((s, i) => (
-              <button key={s.id} onClick={() => setSelectedService(s)}
-                className="card-glass p-7 text-left group reveal" style={{ transitionDelay: `${i*0.08}s` }}>
-                <div className="w-11 h-11 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-xl font-mono text-brand-400 mb-5 group-hover:scale-110 transition-transform duration-300">{s.icon}</div>
-                <h3 className="font-display font-bold text-white text-[1.03rem] mb-2 group-hover:text-brand-300 transition-colors">{s.title}</h3>
-                <p className="text-blue-200/55 text-sm leading-relaxed mb-4">{s.desc}</p>
-                <div className="flex items-center gap-1.5 text-brand-400 text-xs font-semibold">
-                  <span>Learn more</span>
-                  <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" className="group-hover:translate-x-1 transition-transform"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+            {servicesLoading ? (
+              // Skeleton loaders
+              Array.from({length: 3}).map((_, i) => (
+                <div key={i} className="card-glass p-7">
+                  <div className="skeleton w-11 h-11 rounded-xl mb-5" />
+                  <div className="skeleton h-4 w-3/5 rounded mb-3" />
+                  <div className="skeleton h-3 w-full rounded mb-2" />
+                  <div className="skeleton h-3 w-4/5 rounded" />
                 </div>
-              </button>
-            ))}
+              ))
+            ) : previewServices.length > 0 ? (
+              previewServices.map((s, i) => (
+                <button key={s.id || i} onClick={() => setSelectedService(s)}
+                  className="card-glass p-7 text-left group reveal" style={{ transitionDelay: `${i*0.08}s` }}>
+                  <div className="w-11 h-11 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-xl font-mono text-brand-400 mb-5 group-hover:scale-110 transition-transform duration-300">
+                    {s.logo ? <img src={s.logo} alt={s.title} className="w-6 h-6 object-contain" /> : (s.icon || '◈')}
+                  </div>
+                  <h3 className="font-display font-bold text-white text-[1.03rem] mb-2 group-hover:text-brand-300 transition-colors">{s.title}</h3>
+                  <p className="text-blue-200/55 text-sm leading-relaxed mb-4">{s.desc || 'Custom automation solution tailored to your workflow.'}</p>
+                  <div className="flex items-center gap-1.5 text-brand-400 text-xs font-semibold">
+                    <span>Learn more</span>
+                    <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" className="group-hover:translate-x-1 transition-transform"><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="col-span-3 text-center py-10 text-blue-200/50">No services available</div>
+            )}
           </div>
         </div>
       </section>
@@ -436,7 +560,12 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {previewCases.map((cs, i) => (
+            {/* Static case studies - replace with backend data when available */}
+            {[
+              { id: '1', icon: '◈', tag: 'Notion', title: 'Startup OS', desc: 'Complete business management system', result: '15hrs saved/week' },
+              { id: '2', icon: '⟳', tag: 'Automation', title: 'Lead Pipeline', desc: 'Automated CRM workflow', result: '3x faster' },
+              { id: '3', icon: '⬡', tag: 'AI', title: 'Content Engine', desc: 'AI-powered content creation', result: '10x output' },
+            ].map((cs, i) => (
               <Link key={cs.id} to={`/case-studies/${cs.id}`}
                 className="card-glass p-7 flex flex-col gap-5 group reveal" style={{ transitionDelay: `${i*0.08}s` }}>
                 <div className="flex items-start justify-between">
@@ -461,7 +590,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS PREVIEW ────────────────────────────────── */}
+      {/* ── TESTIMONIALS PREVIEW (from backend) ─────────────────── */}
       <section className="py-20 bg-navy-900/30 border-y border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
@@ -474,23 +603,69 @@ export default function Dashboard() {
             </Link>
           </div>
           <div className="grid md:grid-cols-3 gap-5">
-            {TESTIMONIALS_PREVIEW.map((t, i) => (
-              <div key={t.name} className="card-glass p-7 reveal" style={{ transitionDelay: `${i*0.1}s` }}>
-                <div className="flex gap-0.5 mb-4">
-                  {[...Array(5)].map((_,j) => (
-                    <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
-                  ))}
-                </div>
-                <p className="text-blue-100/80 text-[14px] leading-relaxed mb-5">"{t.text}"</p>
-                <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">{t.avatar}</div>
-                  <div>
-                    <p className="font-display font-bold text-white text-sm">{t.name}</p>
-                    <p className="text-blue-300/50 text-[11px]">{t.role}</p>
+            {testimonialsLoading ? (
+              // Skeleton loaders
+              Array.from({length: 3}).map((_, i) => (
+                <div key={i} className="card-glass p-7">
+                  <div className="flex gap-0.5 mb-4">
+                    {[...Array(5)].map((_,j) => (
+                      <div key={j} className="w-3 h-3 rounded-full bg-blue-400/20" />
+                    ))}
+                  </div>
+                  <div className="skeleton h-3 w-full rounded mb-2" />
+                  <div className="skeleton h-3 w-4/5 rounded mb-4" />
+                  <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
+                    <div className="skeleton w-9 h-9 rounded-full" />
+                    <div>
+                      <div className="skeleton h-3 w-20 rounded mb-1" />
+                      <div className="skeleton h-2 w-16 rounded" />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : previewTestimonials.length > 0 ? (
+              previewTestimonials.map((t, i) => {
+                const serviceType = getServiceType(t.tools)
+                const clientInfo = getClientInfoLine(t.clientRole, t.company)
+                const initials = (t.displayName || "??")
+                  .split(" ")
+                  .map((w) => w[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()
+                
+                return (
+                  <div key={t.id || i} className="card-glass p-7 reveal" style={{ transitionDelay: `${i*0.1}s` }}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_,j) => (
+                          <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>
+                          </svg>
+                        ))}
+                      </div>
+                      {serviceType && (
+                        <span className="tag text-[9px]">{serviceType.label}</span>
+                      )}
+                    </div>
+                    <p className="text-blue-100/80 text-[14px] leading-relaxed mb-5">"{t.feedback}"</p>
+                    <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
+                        {clientInfo && (
+                          <p className="text-blue-300/50 text-[11px]">{clientInfo}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="col-span-3 text-center py-10 text-blue-200/50">No testimonials available</div>
+            )}
           </div>
         </div>
       </section>

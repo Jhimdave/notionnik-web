@@ -20,6 +20,11 @@ body {
 ::-webkit-scrollbar-thumb { background: #1a2d5a; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #2d8ef5; }
 
+/* ── Light Mode Scrollbar ───────────────────────────────────────── */
+.light ::-webkit-scrollbar-track { background: #e0ecf4; }
+.light ::-webkit-scrollbar-thumb { background: #8bb8d8; border-radius: 3px; }
+.light ::-webkit-scrollbar-thumb:hover { background: #2d8ef5; }
+
 /* ── Reusable component classes ─────────────────────────────────── */
 @layer components {
   .btn-primary {
@@ -109,12 +114,234 @@ body {
   }
 }
 
+/* ─────────────────────────────────────────────────────────────────── */
+/* LIGHT MODE - Cohesive Light Blue Theme                             */
+/* Matches logo: dark navy text on light blue background               */
+/* ─────────────────────────────────────────────────────────────────── */
+
+.light body {
+  background: linear-gradient(180deg, #e8f4f8 0%, #f0f7fa 50%, #e0ecf4 100%);
+  color: #0d2b4d;
+}
+
+/* Background tints - Pure white with blue tint for cards */
+.light .bg-navy-900,
+.light .bg-navy-900\/30,
+.light .bg-navy-900\/90,
+.light .bg-navy-900\/97 {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.light .bg-navy-800,
+.light .bg-navy-800\/40,
+.light .bg-navy-800\/50,
+.light .bg-navy-800\/60,
+.light .bg-navy-800\/70,
+.light .bg-navy-800\/80,
+.light .bg-navy-800\/90 {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+.light .bg-navy-700\/60 {
+  background: rgba(232, 244, 248, 0.9);
+}
+
+/* Text colors - Dark navy for high contrast against light blue bg */
+.light .text-white {
+  color: #0d2b4d;
+}
+
+.light .text-blue-100,
+.light .text-blue-100\/80,
+.light .text-blue-100\/90 {
+  color: #1a3a5c;
+}
+
+.light .text-blue-200,
+.light .text-blue-200\/55,
+.light .text-blue-200\/60,
+.light .text-blue-200\/65,
+.light .text-blue-200\/70 {
+  color: rgba(26, 58, 92, 0.75);
+}
+
+.light .text-blue-300,
+.light .text-blue-300\/50,
+.light .text-blue-300\/60,
+.light .text-blue-300\/70,
+.light .text-blue-300\/80 {
+  color: #1a5fc0;
+}
+
+.light .text-blue-400,
+.light .text-blue-400\/40,
+.light .text-blue-400\/55,
+.light .text-blue-400\/60,
+.light .text-blue-400\/70 {
+  color: #2d8ef5;
+}
+
+.light .text-brand-400 {
+  color: #1a5fc0;
+}
+
+/* Borders - Light blue tint */
+.light .border-white\/\[0\.03\],
+.light .border-white\/\[0\.05\],
+.light .border-white\/\[0\.06\],
+.light .border-white\/\[0\.07\],
+.light .border-white\/\[0\.08\],
+.light .border-white\/\[0\.09\],
+.light .border-white\/10 {
+  border-color: rgba(45, 142, 245, 0.15);
+}
+
+.light .border-brand-500\/20 {
+  border-color: rgba(45, 142, 245, 0.25);
+}
+
+.light .border-brand-500\/25 {
+  border-color: rgba(45, 142, 245, 0.3);
+}
+
+.light .border-brand-500\/30 {
+  border-color: rgba(45, 142, 245, 0.35);
+}
+
+/* Card glass - White with blue tint */
+.light .card-glass {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(45, 142, 245, 0.15);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(45, 142, 245, 0.08);
+}
+
+/* Buttons */
+.light .btn-primary {
+  background: linear-gradient(135deg, #2d8ef5 0%, #1a5fc0 100%);
+  color: white;
+  border-color: rgba(45, 142, 245, 0.4);
+  box-shadow: 0 4px 14px rgba(45, 142, 245, 0.25);
+}
+
+.light .btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(45, 142, 245, 0.35);
+}
+
+.light .btn-ghost {
+  background: rgba(45, 142, 245, 0.08);
+  color: #1a5fc0;
+  border-color: rgba(45, 142, 245, 0.25);
+}
+
+.light .btn-ghost:hover {
+  background: rgba(45, 142, 245, 0.15);
+  color: #0d2b4d;
+  border-color: rgba(45, 142, 245, 0.4);
+}
+
+/* Pill & Tag - Light blue backgrounds */
+.light .pill,
+.light .tag {
+  background: rgba(45, 142, 245, 0.1);
+  color: #1a5fc0;
+  border-color: rgba(45, 142, 245, 0.25);
+}
+
+/* Gradient text - Navy to blue */
+.light .gradient-text {
+  background: linear-gradient(135deg, #0d2b4d 0%, #1a3a5c 50%, #1a5fc0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .gradient-text-blue {
+  background: linear-gradient(135deg, #1a5fc0 0%, #2d8ef5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Stat number */
+.light .stat-number {
+  background: linear-gradient(135deg, #0d2b4d, #1a5fc0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Skeleton - light blue shimmer */
+.light .skeleton {
+  background: linear-gradient(90deg, #d0e4f0 0%, #e8f4f8 50%, #d0e4f0 100%);
+  background-size: 200% 100%;
+}
+
+/* Section label line */
+.light .section-label::before {
+  background: #2d8ef5;
+}
+
+.light .section-label {
+  color: #1a5fc0;
+}
+
+/* Status live - Keep emerald but softer */
+.light .status-live {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+/* Form inputs */
+.light input,
+.light textarea,
+.light select {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(45, 142, 245, 0.2);
+  color: #0d2b4d;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: rgba(26, 58, 92, 0.4);
+}
+
+.light input:focus,
+.light textarea:focus,
+.light select:focus {
+  border-color: #2d8ef5;
+  box-shadow: 0 0 0 3px rgba(45, 142, 245, 0.15);
+  outline: none;
+}
+
+/* Links */
+.light a:not(.btn-primary):not(.btn-ghost) {
+  color: #1a5fc0;
+}
+
+.light a:not(.btn-primary):not(.btn-ghost):hover {
+  color: #0d2b4d;
+}
+
+/* Navbar specific overrides */
+.light header {
+  background: rgba(232, 244, 248, 0.9);
+  border-bottom-color: rgba(45, 142, 245, 0.15);
+}
+
+/* Footer specific */
+.light footer {
+  background: rgba(220, 236, 244, 0.5);
+  border-top-color: rgba(45, 142, 245, 0.15);
+}
+
 /* ── Global cursor hide for custom cursor ───────────────────────── */
 @media (pointer: fine) {
   body, a, button, [role="button"] { cursor: none !important; }
 }
 
-/* ── Gradient animated border ───────────────────────────────────── */
+/* ── Gradient animated border ─────────────────────────────────── */
 .gradient-border {
   position: relative;
 }
@@ -133,7 +360,7 @@ body {
   50%       { background-position: 100% 50%; }
 }
 
-/* ── Number counter animation ───────────────────────────────────── */
+/* ── Number counter animation ─────────────────────────────────── */
 .stat-number {
   background: linear-gradient(135deg, #fff, #5aabff);
   -webkit-background-clip: text;
@@ -141,7 +368,7 @@ body {
   background-clip: text;
 }
 
-/* ── Shimmer skeleton ───────────────────────────────────────────── */
+/* ── Shimmer skeleton ─────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, #0d1b3e 0%, #1a2d5a 50%, #0d1b3e 100%);
   background-size: 200% 100%;
@@ -152,7 +379,7 @@ body {
   100% { background-position:  200% 0; }
 }
 
-/* ── Floating animation ─────────────────────────────────────────── */
+/* ── Floating animation ───────────────────────────────────────── */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-14px); }
@@ -160,3 +387,12 @@ body {
 .animate-float      { animation: float 4s ease-in-out infinite; }
 .animate-float-slow { animation: float 7s ease-in-out infinite; }
 .animate-float-delayed { animation: float 5s ease-in-out 1.5s infinite; }
+
+/* ── Blink animation for status ───────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-blink {
+  animation: blink 2s ease-in-out infinite;
+}
