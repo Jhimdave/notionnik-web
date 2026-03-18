@@ -15,6 +15,7 @@ import Testimonials    from './pages/Testimonials'
 import AboutUs         from './pages/AboutUs'
 import Book            from './pages/Book'
 import Contact         from './pages/Contact'
+import BookingPage     from './pages/BookingPage'
 import './App.css'
 
 export default function App() {
@@ -35,7 +36,7 @@ export default function App() {
               <Route path="/case-studies/:id"      element={<CaseStudyDetail />} />
               <Route path="/testimonials"          element={<Testimonials />} />
               <Route path="/about"                 element={<AboutUs      />} />
-              <Route path="/book"                  element={<Book         />} />
+              <Route path="/book"                  element={<BookingPage         />} />
               <Route path="/contact"               element={<Contact      />} />
             </Routes>
           </div>
