@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE = import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
 
 // ── Helpers ───────────────────────────────────────────────────────
 function formatDate(dateStr) {
@@ -25,12 +25,33 @@ function getTodayStr() {
   return d.toISOString().split("T")[0];
 }
 
+// ── Icons ─────────────────────────────────────────────────────────
+function GoogleMeetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
+      <path d="M22 7.5l-5 3.5V7a1 1 0 00-1-1H3a1 1 0 00-1 1v10a1 1 0 001 1h13a1 1 0 001-1v-4l5 3.5V7.5z" fill="#00832D"/>
+      <rect x="2" y="6" width="14" height="12" rx="1" fill="#00AC47"/>
+      <path d="M22 7.5v9L17 13V11l5-3.5z" fill="#00832D"/>
+    </svg>
+  );
+}
+
+function ZoomIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#2D8CFF">
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 13.5H8a1.5 1.5 0 01-1.5-1.5V10a1.5 1.5 0 011.5-1.5h6a1.5 1.5 0 011.5 1.5v1.5l2.5-1.5v4l-2.5-1.5V14a1.5 1.5 0 01-1.5 1.5z"/>
+    </svg>
+  );
+}
+
 // ── Confirmation Modal ────────────────────────────────────────────
 function ConfirmationModal({ event, onClose }) {
+  const isZoom = event.platform === "zoom";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-fade-in"
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
         style={{ animation: "fadeScaleIn 0.25s ease both" }}
       >
         {/* Icon */}
@@ -64,11 +85,22 @@ function ConfirmationModal({ event, onClose }) {
               {formatTime(event.start.dateTime)} – {formatTime(event.end.dateTime)}
             </span>
           </div>
+          <div className="h-px bg-gray-100" />
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Platform</span>
+            <span className="flex items-center gap-1.5 font-medium text-gray-800">
+              {isZoom ? <ZoomIcon /> : <GoogleMeetIcon />}
+              {isZoom ? "Zoom" : "Google Meet"}
+            </span>
+          </div>
           {event.meetLink && (
             <>
               <div className="h-px bg-gray-100" />
               <div className="flex justify-between text-sm items-center">
-                <span className="text-gray-400">Google Meet</span>
+                {/* ✅ Fixed: dynamic label instead of hardcoded "Google Meet" */}
+                <span className="text-gray-400">
+                  {isZoom ? "Zoom" : "Google Meet"}
+                </span>
                 <a
                   href={event.meetLink}
                   target="_blank"
@@ -107,29 +139,26 @@ function ConfirmationModal({ event, onClose }) {
 
 // ── Main Booking Component ────────────────────────────────────────
 export default function BookingPage() {
-  const [step, setStep] = useState(1); // 1 = form, 2 = pick slot
+  const [step, setStep] = useState(1);
 
-  // Form fields
   const [form, setForm] = useState({
     name: "",
     email: "",
     title: "",
     notes: "",
     date: getTodayStr(),
+    platform: "meet",
   });
 
-  // Slots
   const [slots, setSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState("");
 
-  // Booking
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [confirmedEvent, setConfirmedEvent] = useState(null);
 
-  // Fetch slots whenever date changes (on step 2)
   useEffect(() => {
     if (step !== 2 || !form.date) return;
     fetchSlots(form.date);
@@ -179,6 +208,7 @@ export default function BookingPage() {
           email: form.email,
           title: form.title || undefined,
           notes: form.notes || undefined,
+          platform: form.platform,
           start: selectedSlot.start,
           end: selectedSlot.end,
         }),
@@ -197,15 +227,13 @@ export default function BookingPage() {
   function handleModalClose() {
     setConfirmedEvent(null);
     setStep(1);
-    setForm({ name: "", email: "", title: "", notes: "", date: getTodayStr() });
+    setForm({ name: "", email: "", title: "", notes: "", date: getTodayStr(), platform: "meet" });
     setSlots([]);
     setSelectedSlot(null);
   }
 
-  // ── Render ──────────────────────────────────────────────────────
   return (
     <>
-      {/* Google Font */}
       <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:wght@300;400;500&display=swap"
         rel="stylesheet"
@@ -227,9 +255,7 @@ export default function BookingPage() {
               {step === 1 ? "Book a session." : "Pick a time slot."}
             </h1>
             {step === 2 && (
-              <p className="text-sm text-gray-400 mt-2">
-                {formatDate(form.date)}
-              </p>
+              <p className="text-sm text-gray-400 mt-2">{formatDate(form.date)}</p>
             )}
           </div>
 
@@ -263,6 +289,7 @@ export default function BookingPage() {
           {/* ── Step 1: Form ── */}
           {step === 1 && (
             <form onSubmit={handleStep1Submit} className="space-y-4">
+
               {/* Name */}
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Full name *</label>
@@ -316,6 +343,37 @@ export default function BookingPage() {
                 />
               </div>
 
+              {/* Platform toggle */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Meeting platform</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, platform: "meet" }))}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      form.platform === "meet"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    <GoogleMeetIcon />
+                    Google Meet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, platform: "zoom" }))}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-all ${
+                      form.platform === "zoom"
+                        ? "bg-gray-900 text-white border-gray-900"
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    <ZoomIcon />
+                    Zoom
+                  </button>
+                </div>
+              </div>
+
               {/* Notes */}
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Notes</label>
@@ -341,6 +399,15 @@ export default function BookingPage() {
           {/* ── Step 2: Slot picker ── */}
           {step === 2 && (
             <div>
+              {/* Platform badge */}
+              <div className="flex items-center gap-2 mb-5 text-sm text-gray-500">
+                <span className="text-gray-400 text-xs uppercase tracking-wider">Platform</span>
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                  {form.platform === "zoom" ? <ZoomIcon /> : <GoogleMeetIcon />}
+                  {form.platform === "zoom" ? "Zoom" : "Google Meet"}
+                </span>
+              </div>
+
               {/* Date changer */}
               <div className="mb-6">
                 <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Change date</label>
@@ -423,12 +490,11 @@ export default function BookingPage() {
 
           {/* Footer note */}
           <p className="text-center text-xs text-gray-300 mt-8">
-            30-minute sessions · Mon–Fri · 9AM–5PM (Asia/Manila)
+            30-minute sessions · Mon–Fri · 10AM–2AM (Asia/Manila)
           </p>
         </div>
       </div>
 
-      {/* Confirmation Modal */}
       {confirmedEvent && (
         <ConfirmationModal event={confirmedEvent} onClose={handleModalClose} />
       )}
