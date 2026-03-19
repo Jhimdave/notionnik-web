@@ -47,7 +47,6 @@ function ZoomIcon() {
 // ── Confirmation Modal ────────────────────────────────────────────
 function ConfirmationModal({ event, onClose }) {
   const isZoom = event.platform === "zoom";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
       <div
@@ -93,38 +92,35 @@ function ConfirmationModal({ event, onClose }) {
               {isZoom ? "Zoom" : "Google Meet"}
             </span>
           </div>
-          {event.meetLink && (
+
+          {/* Booking ID — only show when available */}
+          {event.id && event.id !== "pending" && (
             <>
               <div className="h-px bg-gray-100" />
-              <div className="flex justify-between text-sm items-center">
-                {/* ✅ Fixed: dynamic label instead of hardcoded "Google Meet" */}
-                <span className="text-gray-400">
-                  {isZoom ? "Zoom" : "Google Meet"}
-                </span>
-                <a
-                  href={event.meetLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-500 hover:underline font-medium truncate max-w-[200px]"
-                >
-                  Join meeting →
-                </a>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Booking ID</span>
+                <span className="text-gray-400 font-mono text-xs truncate max-w-[180px]">{event.id}</span>
               </div>
             </>
           )}
-          <div className="h-px bg-gray-100" />
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Booking ID</span>
-            <span className="text-gray-400 font-mono text-xs truncate max-w-[180px]">{event.id}</span>
-          </div>
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
-        >
-          Done
-        </button>
+        <div className="flex flex-col gap-2">
+          <a
+            href="https://mail.google.com"
+            target="_blank"
+            rel="noreferrer"
+            className="w-full py-3 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors text-center"
+          >
+            📧 Check your Gmail for the meeting link
+          </a>
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
+          >
+            Done
+          </button>
+        </div>
       </div>
 
       <style>{`
@@ -158,6 +154,14 @@ export default function BookingPage() {
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [confirmedEvent, setConfirmedEvent] = useState(null);
+  const [serverWaking, setServerWaking] = useState(false);
+
+  // Pre-warm Render server on mount
+  useEffect(() => {
+    setServerWaking(true);
+    fetch(`${API_BASE}/`)
+      .finally(() => setServerWaking(false));
+  }, []);
 
   useEffect(() => {
     if (step !== 2 || !form.date) return;
@@ -199,6 +203,20 @@ export default function BookingPage() {
     setBooking(true);
     setBookingError("");
 
+    // ── Show modal IMMEDIATELY with optimistic data ──────────────
+    const optimisticEvent = {
+      id: "pending",
+      summary: form.title || `Meeting with ${form.name}`,
+      start: { dateTime: selectedSlot.start },
+      end: { dateTime: selectedSlot.end },
+      meetLink: null,
+      platform: form.platform,
+      pending: true,
+    };
+    setConfirmedEvent(optimisticEvent);
+    setBooking(false);
+
+    // ── Then fetch in background and update modal with real data ──
     try {
       const res = await fetch(`${API_BASE}/api/book`, {
         method: "POST",
@@ -215,12 +233,23 @@ export default function BookingPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Booking failed");
-      setConfirmedEvent(data.event);
+
+      if (!res.ok) {
+        // Booking actually failed — close modal and show error
+        setConfirmedEvent(null);
+        setBookingError(data.error || `Booking failed (${res.status})`);
+        return;
+      }
+
+      // Update modal with real event data including Meet link
+      setConfirmedEvent({
+        ...data.event,
+        pending: false,
+      });
     } catch (err) {
-      setBookingError(err.message);
-    } finally {
-      setBooking(false);
+      // Network error — keep modal open since event may have been created
+      console.warn("[book] Background update failed:", err.message);
+      setConfirmedEvent((prev) => prev ? { ...prev, pending: false } : prev);
     }
   }
 
@@ -244,6 +273,17 @@ export default function BookingPage() {
         style={{ fontFamily: "'DM Sans', sans-serif" }}
       >
         <div className="w-full max-w-lg">
+
+          {/* Server waking banner */}
+          {serverWaking && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs flex items-center gap-2">
+              <svg className="w-3 h-3 animate-spin flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+              Server is waking up, this may take a moment…
+            </div>
+          )}
 
           {/* Header */}
           <div className="mb-10">
