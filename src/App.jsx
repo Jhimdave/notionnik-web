@@ -36,7 +36,7 @@ export default function App() {
               <Route path="/case-studies/:id"      element={<CaseStudyDetail />} />
               <Route path="/testimonials"          element={<Testimonials />} />
               <Route path="/about"                 element={<AboutUs      />} />
-              <Route path="/book"                  element={<BookingPage         />} />
+              <Route path="/book"                  element={<Book         />} />
               <Route path="/contact"               element={<Contact      />} />
             </Routes>
           </div>
