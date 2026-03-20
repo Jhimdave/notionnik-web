@@ -112,16 +112,6 @@ function ConfirmationModal({ event, onClose, isDark }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <a href="https://mail.google.com" target="_blank" rel="noreferrer"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              width: '100%', padding: '12px', borderRadius: '12px',
-              background: 'linear-gradient(135deg,#052659,#021024)',
-              color: '#C1E8FF', textDecoration: 'none',
-              fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '13.5px',
-            }}>
-            📧 Check Gmail for the meeting link
-          </a>
           <button onClick={onClose} style={{
             width: '100%', padding: '12px', borderRadius: '12px',
             background: 'transparent',

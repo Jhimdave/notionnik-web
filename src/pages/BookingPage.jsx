@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 // ── Helpers ───────────────────────────────────────────────────────
 function formatDate(dateStr) {
@@ -93,34 +93,19 @@ function ConfirmationModal({ event, onClose }) {
             </span>
           </div>
 
-          {/* Booking ID — only show when available */}
-          {event.id && event.id !== "pending" && (
-            <>
-              <div className="h-px bg-gray-100" />
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-400">Booking ID</span>
-                <span className="text-gray-400 font-mono text-xs truncate max-w-[180px]">{event.id}</span>
-              </div>
-            </>
-          )}
+          <div className="h-px bg-gray-100" />
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-400">Booking ID</span>
+            <span className="text-gray-400 font-mono text-xs truncate max-w-[180px]">{event.id}</span>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <a
-            href="https://mail.google.com"
-            target="_blank"
-            rel="noreferrer"
-            className="w-full py-3 rounded-xl bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 transition-colors text-center"
-          >
-            📧 Check your Gmail for the meeting link
-          </a>
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
-          >
-            Done
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl bg-gray-900 text-white text-sm font-medium hover:bg-gray-700 transition-colors"
+        >
+          Done
+        </button>
       </div>
 
       <style>{`
@@ -530,7 +515,7 @@ export default function BookingPage() {
 
           {/* Footer note */}
           <p className="text-center text-xs text-gray-300 mt-8">
-            30-minute sessions · Mon–Fri · 10AM–2AM (Asia/Manila)
+            30-minute sessions · Mon–Fri · 9AM–5PM (Asia/Manila)
           </p>
         </div>
       </div>
