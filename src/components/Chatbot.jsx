@@ -107,7 +107,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
     <>
       {/* Chat window */}
       <div className={`fixed bottom-24 right-5 md:right-8 z-50 w-[340px] max-w-[calc(100vw-2.5rem)]
-        bg-navy-900 border border-white/10 rounded-2xl shadow-2xl
+        bg-navy-950 border border-white/10 rounded-2xl shadow-2xl
         transition-all duration-300 origin-bottom-right
         ${open ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}
       `}>

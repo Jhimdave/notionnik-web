@@ -25,7 +25,7 @@ export default function CaseStudyDetail() {
       {/* Back */}
       <div className="max-w-4xl mx-auto px-5 md:px-8 mb-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-blue-300/60 hover:text-white transition-colors text-sm font-body">
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <svg width="14" height="14https://github.com/Jhimdave/notionnik-web.git" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
           Back to Case Studies
