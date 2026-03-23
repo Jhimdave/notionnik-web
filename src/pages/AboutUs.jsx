@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 const NOTION_PROXY_URL = `${API_BASE}/api/notion-team`;
+const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
 
 const SEEDS = [
   "Alex", "Jordan", "Morgan", "Taylor",
@@ -71,7 +72,11 @@ export default function AboutUs() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(NOTION_PROXY_URL);
+        const res = await fetch(NOTION_PROXY_URL,{
+          headers:{
+            "x-api-key":API_KEY,
+          },
+        });
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
         const data = await res.json();

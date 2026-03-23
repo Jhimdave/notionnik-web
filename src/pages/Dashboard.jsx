@@ -7,11 +7,13 @@ import { useTheme } from "./ThemeContext";
 const API_BASE =
   import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
 
+const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545"
+
 /* ── Image Proxy Helper ─────────────────────────────────────── */
 function proxyImage(url) {
   if (!url) return null;
   if (!url.includes("notion") && !url.includes("amazonaws")) return url;
-  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}`;
+  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}&api_key=${API_KEY}`;
 }
 
 const COLORS = [
@@ -238,10 +240,12 @@ function ContactForm() {
 
       const res = await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": API_KEY,
+        },
         body: JSON.stringify(form),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
@@ -474,8 +478,12 @@ export default function Dashboard() {
   // ── Job Success stat (dynamic from Notion via backend) ──
   const [jobSuccess, setJobSuccess] = useState();
 
-  useEffect(() => {
-  fetch(`${API_BASE}/api/website-stats`)
+useEffect(() => {
+  fetch(`${API_BASE}/api/website-stats`, {
+    headers: {
+      "x-api-key": API_KEY,
+    },
+  })
     .then((r) => r.json())
     .then((data) => { if (data.success) setJobSuccess(data.jobSuccess); })
     .catch(() => {});
@@ -490,7 +498,11 @@ export default function Dashboard() {
 
   // Fetch services from backend
   useEffect(() => {
-    fetch(`${API_BASE}/api/notion-services`)
+    fetch(`${API_BASE}/api/notion-services`, {
+      headers:{
+        "x-api-key": API_KEY,
+      },
+    })
       .then((r) => {
         if (!r.ok) throw new Error(r.status);
         return r.json();
@@ -508,15 +520,19 @@ export default function Dashboard() {
 
   // Fetch testimonials from backend
   useEffect(() => {
-    fetch(`${API_BASE}/api/testimonials`)
-      .then(async (r) => {
-        const text = await r.text();
-        try {
-          return JSON.parse(text);
-        } catch {
-          return null;
-        }
+      fetch(`${API_BASE}/api/testimonials`, {
+        headers: {
+          "x-api-key": API_KEY,
+        },
       })
+        .then(async (r) => {
+          const text = await r.text();
+          try {
+            return JSON.parse(text);
+          } catch {
+            return null;
+          }
+        })
       .then((res) => {
         if (res?.success) {
           setTestimonials(res.data.slice(0, 3));

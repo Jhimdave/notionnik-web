@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from './ThemeContext'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com'
+const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com';
+const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
+
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function getTodayStr() {
@@ -231,7 +233,7 @@ export default function Book() {
     try {
       const res  = await fetch(`${API_BASE}/api/book`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
         body: JSON.stringify({
           name: form.name, email: form.email,
           title: form.title || undefined,

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { SERVICES_DATA } from '../data'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
+const API_KEY = '347a8e8a-e6fa-4870-9590-bffef8481545'
 
 function parseService(page) {
   const props = page.properties || {}
@@ -133,13 +134,17 @@ export default function Services() {
   const [page,     setPage]     = useState(0)
   const PER = 6
 
-  useEffect(() => {
-    fetch(`${API_BASE}/api/notion-services`)
-      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-      .then(d => setServices((d.results||[]).map(parseService)))
-      .catch(() => setServices(SERVICES_DATA.map(s => ({ ...s, id: s.id }))))
-      .finally(() => setLoading(false))
-  }, [])
+useEffect(() => {
+  fetch(`${API_BASE}/api/notion-services`, {
+    headers: {
+      "x-api-key": API_KEY,
+    },
+  })
+    .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
+    .then(d => setServices((d.results||[]).map(parseService)))
+    .catch(() => setServices(SERVICES_DATA.map(s => ({ ...s, id: s.id }))))
+    .finally(() => setLoading(false))
+}, [])
 
   const total   = Math.ceil(services.length / PER)
   const current = services.slice(page*PER, page*PER+PER)

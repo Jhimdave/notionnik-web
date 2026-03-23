@@ -9,7 +9,7 @@ const COLORS = [
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
-
+const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
 const CARD_HEIGHT = 280;
 const PAGE_SIZE   = 6;
 // Clamp feedback after this many characters
@@ -18,7 +18,7 @@ const FEEDBACK_LIMIT = 180;
 function proxyImage(url) {
   if (!url) return null;
   if (!url.includes("notion") && !url.includes("amazonaws")) return url;
-  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}`;
+  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}&api_key=${API_KEY}`;
 }
 
 function Stars({ n = 5 }) {
@@ -342,7 +342,11 @@ export default function Testimonials() {
   const timerRef = useRef(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/testimonials`)
+    fetch(`${API_BASE}/api/testimonials`,{
+      headers:{
+        "x-api-key":API_KEY,
+      },
+    })
       .then(async r => {
         const text = await r.text();
         try { return JSON.parse(text); } catch { return null; }

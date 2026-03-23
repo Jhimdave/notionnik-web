@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 
 const API_BASE    = import.meta.env.VITE_API_URL || ""
 const WEBHOOK_URL = `${API_BASE}/api/chat`
+const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545"
 
 const BOT_RESPONSES = {
   default: "Hi! I'm NotionBot 🤖 I can help answer questions about our services. What would you like to know?",
@@ -56,7 +57,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json','x-api-key' : API_KEY },
         body: JSON.stringify({
           message:        txt,
           timestamp:      new Date().toISOString(),
