@@ -252,19 +252,6 @@ export default function AboutUs() {
                     {m.role}
                   </span>
 
-                  {m.description && (
-                    <p
-                      className="text-blue-300/80 text-sm italic leading-6 text-center overflow-hidden w-full"
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: "vertical",
-                      }}
-                    >
-                      &ldquo; {m.description} &rdquo;
-                    </p>
-                  )}
-
                   {/* Subtle hint */}
                   <span className="mt-auto pt-3 text-[10px] text-brand-400/60 tracking-wide">
                     view profile ↗
