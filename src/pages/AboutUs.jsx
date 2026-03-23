@@ -193,7 +193,7 @@ export default function AboutUs() {
       </section>
 
       {/* Team */}
-      <section className="py-20">
+      <section className="py-10">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <p className="section-label">The Team</p>
           <h2 className="section-title text-white mb-2 text-3xl">
@@ -228,13 +228,13 @@ export default function AboutUs() {
                 <div
                   key={m.name + i}
                   onClick={() => openModal(m)}
-                  className="card-glass p-7 text-center flex flex-col items-center cursor-pointer
+                  className="card-glass p-8 text-center flex flex-col items-center cursor-pointer
                              hover:border-brand-500/40 hover:scale-[1.02] transition-all duration-300"
-                  style={{ height: 400 }}
+                  style={{ height: 370 }}
                 >
                   <div
-                    className="rounded-full overflow-hidden border-2 border-brand-500/30 mb-4 flex-shrink-0"
-                    style={{ width: 122, height: 122 }}
+                    className="rounded-full overflow-hidden border-2 border-brand-500/30 mb-8 flex-shrink-0"
+                    style={{ width: 180, height: 180 }}
                   >
                     <img
                       src={m.img}
@@ -244,15 +244,15 @@ export default function AboutUs() {
                     />
                   </div>
 
-                  <h3 className="font-display font-bold text-white mb-1 flex-shrink-0">
+                  <h3 className="font-display text-[18px] font-bold text-white mb-2 flex-shrink-0">
                     {m.name}
                   </h3>
 
-                  <span className="tag text-[9px] mb-3 inline-block flex-shrink-0">
+                  <span className="tag text-[12px] mb-3 inline-block flex-shrink-0">
                     {m.role}
                   </span>
 
-                  {m.description && (
+                  {/* {m.description && (
                     <p
                       className="text-blue-300/80 text-sm italic leading-6 text-center overflow-hidden w-full"
                       style={{
@@ -263,12 +263,12 @@ export default function AboutUs() {
                     >
                       &ldquo; {m.description} &rdquo;
                     </p>
-                  )}
+                  )} */}
 
                   {/* Subtle hint */}
-                  <span className="mt-auto pt-3 text-[10px] text-brand-400/60 tracking-wide">
+                  {/* <span className="mt-auto pt-3 text-[10px] text-brand-400/60 tracking-wide">
                     view profile ↗
-                  </span>
+                  </span> */}
                 </div>
               ))}
           </div>

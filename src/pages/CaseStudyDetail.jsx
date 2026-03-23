@@ -1,13 +1,36 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { CASE_STUDIES } from '../data'
 
 export default function CaseStudyDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const cs = CASE_STUDIES.find(c => c.id === id)
+  
+  // Carousel state
+  const [currentImage, setCurrentImage] = useState(0)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
 
   useEffect(() => { window.scrollTo(0, 0) }, [id])
+
+  // Auto-scroll carousel every 3 seconds
+  useEffect(() => {
+    if (!cs?.images?.length || !isAutoPlaying) return
+    
+    const interval = setInterval(() => {
+      setCurrentImage((prev) => (prev + 1) % cs.images.length)
+    }, 3000)
+    
+    return () => clearInterval(interval)
+  }, [cs?.images, isAutoPlaying])
+
+  const nextImage = useCallback(() => {
+    setCurrentImage((prev) => (prev + 1) % cs.images.length)
+  }, [cs?.images?.length])
+
+  const prevImage = useCallback(() => {
+    setCurrentImage((prev) => (prev - 1 + cs.images.length) % cs.images.length)
+  }, [cs?.images?.length])
 
   if (!cs) return (
     <div className="min-h-screen flex items-center justify-center pt-20">
@@ -25,7 +48,7 @@ export default function CaseStudyDetail() {
       {/* Back */}
       <div className="max-w-4xl mx-auto px-5 md:px-8 mb-8">
         <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-blue-300/60 hover:text-white transition-colors text-sm font-body">
-          <svg width="14" height="14https://github.com/Jhimdave/notionnik-web.git" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
           Back to Case Studies
@@ -119,6 +142,96 @@ export default function CaseStudyDetail() {
             <p className="text-blue-100/80 leading-[1.85] text-[15px]">{cs.outcome}</p>
           </div>
         </section>
+
+        {/* Image Carousel Section */}
+        {cs.images && cs.images.length > 0 && (
+          <section className="py-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-base flex-shrink-0">📸</div>
+              <h2 className="font-display text-2xl font-bold text-white">Project Gallery</h2>
+            </div>
+            
+            <div 
+              className="relative bg-navy-900/50 border border-white/[0.08] rounded-3xl overflow-hidden"
+              onMouseEnter={() => setIsAutoPlaying(false)}
+              onMouseLeave={() => setIsAutoPlaying(true)}
+            >
+              {/* Main Image Display */}
+              <div className="relative aspect-video bg-navy-950">
+                {cs.images.map((img, idx) => (
+                  <div
+                    key={idx}
+                    className={`absolute inset-0 transition-opacity duration-700 ease-in-out ${
+                      idx === currentImage ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt={`${cs.title} - Image ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-navy-950/60 via-transparent to-transparent" />
+                  </div>
+                ))}
+                
+                {/* Navigation Arrows */}
+                {cs.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black/60 transition-all duration-300 group"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-black/60 transition-all duration-300 group"
+                    >
+                      <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+                
+                {/* Image Counter */}
+                <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10">
+                  <span className="font-mono text-xs text-white/80">
+                    {currentImage + 1} / {cs.images.length}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Thumbnail Navigation */}
+              {cs.images.length > 1 && (
+                <div className="p-4 bg-navy-900/80 border-t border-white/[0.06]">
+                  <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                    {cs.images.map((img, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentImage(idx)}
+                        className={`relative flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all duration-300 ${
+                          idx === currentImage 
+                            ? 'border-brand-500 ring-2 ring-brand-500/20' 
+                            : 'border-transparent opacity-50 hover:opacity-100'
+                        }`}
+                      >
+                        <img
+                          src={img}
+                          alt={`Thumbnail ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* CTA */}
         <div className="bg-gradient-to-br from-navy-800 to-navy-900 border border-brand-500/20 rounded-3xl p-10 text-center relative overflow-hidden">

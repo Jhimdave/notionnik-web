@@ -10,10 +10,7 @@ const COLORS = [
 const API_BASE =
   import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
 const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
-const CARD_HEIGHT = 280;
 const PAGE_SIZE   = 6;
-// Clamp feedback after this many characters
-const FEEDBACK_LIMIT = 180;
 
 function proxyImage(url) {
   if (!url) return null;
@@ -67,20 +64,15 @@ function getClientInfoLine(role, company) {
   return r || c || "";
 }
 
-/* ── Testimonial Card — fixed height, truncated feedback ──────── */
+/* ── Testimonial Card — full feedback, View more bottom right ─── */
 function TestimonialCard({ t, i, onClick }) {
   const initials    = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const serviceType = getServiceType(t.tools);
   const clientInfo  = getClientInfoLine(t.clientRole, t.company);
-  const isTruncated = (t.feedback || "").length > FEEDBACK_LIMIT;
-  const preview     = isTruncated
-    ? t.feedback.slice(0, FEEDBACK_LIMIT).trimEnd() + "…"
-    : t.feedback;
 
   return (
     <div
-      className="card-glass p-6 flex flex-col gap-3 cursor-pointer hover:border-brand-500/40 transition-all duration-200"
-      style={{ height: CARD_HEIGHT }}
+      className="card-glass p-6 flex flex-col gap-3 cursor-pointer hover:border-brand-500/40 transition-all duration-200 h-full"
       onClick={() => onClick(t)}
     >
       {/* Top: stars + tag */}
@@ -89,29 +81,25 @@ function TestimonialCard({ t, i, onClick }) {
         {serviceType && <span className="tag text-[9px]">{serviceType.label}</span>}
       </div>
 
-      {/* Feedback — grows to fill, clamps overflow */}
-      <div className="flex-1 overflow-hidden relative">
+      {/* Feedback — full text displayed */}
+      <div className="flex-1">
         <p className="text-blue-100/80 text-[13px] leading-relaxed">
-          {preview}
+          {t.feedback}
         </p>
-        {isTruncated && (
-          <div
-            className="absolute bottom-0 left-0 w-full pt-6"
-          >
-            <span className="text-brand-400 text-xs font-medium underline underline-offset-2">
-              View more...
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Footer: avatar + name */}
-      <div className="flex items-center gap-3 pt-2 border-t border-white/[0.05] flex-shrink-0">
-        <Avatar src={t.image} initials={initials} color={COLORS[i % COLORS.length]} />
-        <div>
-          <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
-          {clientInfo && <p className="text-blue-300/50 text-[11px]">{clientInfo}</p>}
+      {/* Footer: client details (left) + View more (right) */}
+      <div className="flex items-center justify-between pt-3 border-t border-white/[0.05] flex-shrink-0 mt-auto gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar src={t.image} initials={initials} color={COLORS[i % COLORS.length]} />
+          <div className="min-w-0">
+            <p className="font-display font-bold text-white text-sm truncate">{t.displayName}</p>
+            {clientInfo && <p className="text-blue-300/50 text-[11px] truncate">{clientInfo}</p>}
+          </div>
         </div>
+        <span className="text-brand-400 text-xs font-medium underline underline-offset-2 flex-shrink-0">
+          View more...
+        </span>
       </div>
     </div>
   );
@@ -269,65 +257,125 @@ function Modal({ t, onClose, isDark }) {
   );
 }
 
-/* ── Swipeable paginated grid ─────────────────────────────────── */
-function ReviewsGrid({ testimonials, onOpen }) {
-  const [page, setPage]     = useState(0);
-  const touchStartX         = useRef(null);
-  const totalPages          = Math.ceil(testimonials.length / PAGE_SIZE);
-  const slice               = testimonials.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-
-  function handleTouchStart(e) {
-    touchStartX.current = e.touches[0].clientX;
+/* ── Shuffle utility ─────────────────────────────────────────── */
+function shuffleArray(array) {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
+  return newArray;
+}
 
-  function handleTouchEnd(e) {
-    if (touchStartX.current === null) return;
-    const delta = touchStartX.current - e.changedTouches[0].clientX;
-    if (Math.abs(delta) < 40) return; // too small — ignore
-    if (delta > 0 && page < totalPages - 1) setPage(p => p + 1); // swipe left → next
-    if (delta < 0 && page > 0)             setPage(p => p - 1); // swipe right → prev
-    touchStartX.current = null;
-  }
+/* ── 3-Row Responsive Carousel (1 mobile, 2 tablet, 3 desktop) ─ */
+function ReviewsCarousel({ testimonials, onOpen }) {
+  // Randomize testimonials
+  // const shuffled = shuffleArray(testimonials);
+  
+  // Split into 3 rows (will show/hide via CSS)
+  const rows = [[], [], []];
+  testimonials.forEach((t, i) => {
+    rows[i % 2].push(t);
+  });
+
+  // Duplicate for seamless scroll
+  rows.forEach((row, idx) => {
+    if (row.length > 0) {
+      rows[idx] = [...row, ...row];
+    }
+  });
+
+  const carouselStyles = `
+    @keyframes scrollLeft {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-33.333%); }
+    }
+    @keyframes scrollRight {
+      0% { transform: translateX(-33.333%); }
+      100% { transform: translateX(0); }
+    }
+    .carousel-row {
+      display: flex;
+      gap: 1.25rem;
+      width: fit-content;
+    }
+    .carousel-row-left {
+      animation: scrollLeft 50s linear infinite;
+    }
+    .carousel-row-right {
+      animation: scrollRight 50s linear infinite;
+    }
+    .carousel-row:hover {
+      animation-play-state: paused;
+    }
+    .carousel-card {
+      width: 400px;
+      height : 370px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 640px) {
+      .carousel-card {
+        width: 300px;
+      }
+    }
+    .mask-fade-container {
+      mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(0,0,0,0.1) 5%, 
+        rgba(0,0,0,1) 15%, 
+        rgba(0,0,0,1) 85%, 
+        rgba(0,0,0,0.1) 95%, 
+        transparent 100%
+      );
+      -webkit-mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(0,0,0,0.1) 5%, 
+        rgba(0,0,0,1) 15%, 
+        rgba(0,0,0,1) 85%, 
+        rgba(0,0,0,0.1) 95%, 
+        transparent 100%
+      );
+    }
+  `;
 
   return (
-    <div
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      {/* Grid — always 2 col on sm, 3 col on lg */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {slice.map((t, i) => (
-          <TestimonialCard
-            key={t.id}
-            t={t}
-            i={page * PAGE_SIZE + i}
-            onClick={onOpen}
-          />
-        ))}
-      </div>
-
-      {/* Page dots — swipe hint */}
-      {totalPages > 1 && (
-        <div className="flex flex-col items-center gap-3 mt-10">
-          <div className="flex gap-2">
-            {Array.from({ length: totalPages }).map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setPage(i)}
-                className="transition-all duration-300 rounded-full"
-                style={{
-                  width:      i === page ? 28 : 8,
-                  height:     8,
-                  background: i === page ? "#2d8ef5" : "rgba(45,142,245,0.20)",
-                }}
-              />
+    <div className="relative w-full md:w-[70%] mx-auto px-4">
+      <style>{carouselStyles}</style>
+      
+      <div className="mask-fade-container flex flex-col gap-5 py-4 overflow-hidden">
+        {/* Row 1 - always visible */}
+        <div className="overflow-hidden">
+          <div className="carousel-row carousel-row-left">
+            {rows[0].map((t, i) => (
+              <div key={`r1-${t.id}-${i}`} className="carousel-card">
+                <TestimonialCard t={t} i={i} onClick={onOpen} />
+              </div>
             ))}
           </div>
-          <p className="text-blue-300/30 text-[11px] font-mono tracking-widest uppercase select-none">
-            swipe to browse
-          </p>
         </div>
-      )}
+
+        {/* Row 2 - hidden on mobile, visible on md+ */}
+        <div className="overflow-hidden hidden md:block">
+          <div className="carousel-row carousel-row-right">
+            {rows[1].map((t, i) => (
+              <div key={`r2-${t.id}-${i}`} className="carousel-card">
+                <TestimonialCard t={t} i={i} onClick={onOpen} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 3 - hidden on tablet/mobile, visible on lg+ */}
+        <div className="overflow-hidden hidden lg:block">
+          <div className="carousel-row carousel-row-left" style={{ animationDuration: '45s' }}>
+            {rows[2].map((t, i) => (
+              <div key={`r3-${t.id}-${i}`} className="carousel-card">
+                <TestimonialCard t={t} i={i} onClick={onOpen} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -436,16 +484,16 @@ export default function Testimonials() {
         </section>
       )}
 
-      {/* All reviews — paginated + swipeable */}
+      {/* All reviews — 70% width, randomized, responsive rows */}
       <section className="py-16">
-        <div className="max-w-7xl mx-auto px-5 md:px-8">
-          <h2 className="section-title text-white mb-10 text-2xl">All Reviews</h2>
-          {loading ? (
-            <div className="text-blue-300/50 text-center py-20">Loading testimonials...</div>
-          ) : (
-            <ReviewsGrid testimonials={testimonials} onOpen={setModal} />
-          )}
+        <div className="max-w-7xl mx-auto px-5 md:px-8 mb-10">
+          <h2 className="section-title text-white text-2xl">All Reviews</h2>
         </div>
+        {loading ? (
+          <div className="text-blue-300/50 text-center py-20">Loading testimonials...</div>
+        ) : (
+          <ReviewsCarousel testimonials={testimonials} onOpen={setModal} />
+        )}
       </section>
 
       {/* Stats */}

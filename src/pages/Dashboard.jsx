@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useTheme } from "./ThemeContext";
+import { ToolsCarousel } from "./ToolsCarousel"
 
 /* ── API Base ─────────────────────────────────────────────── */
 const API_BASE =
@@ -397,6 +398,11 @@ const PROCESS = [
   },
 ];
 
+
+
+/* ── Tools Carousel Component ──────────────────────────────── */
+
+
 /* ── Helpers ───────────────────────────────────────────────── */
 function parseService(page) {
   const props = page.properties || {};
@@ -493,7 +499,7 @@ useEffect(() => {
     { value: 200,                             suffix: "+",  label: "Projects Completed" },
     { value: 100,                             suffix: "+",  label: "Happy Clients"       },
     { value: jobSuccess,                      suffix: "%",  label: "Job Success Rate"    },
-    { value: new Date().getFullYear() - 2022, suffix: "yr", label: "Experience"          },
+    { value: new Date().getFullYear() - 2022, suffix: "yrs", label: "Experience"          },
   ];
 
   // Fetch services from backend
@@ -680,7 +686,7 @@ useEffect(() => {
           </div>
         </div>
       </section>
-
+      
       {/* ── STATS ───────────────────────────────────────────────── */}
       <section className="py-14 border-y border-white/[0.05] bg-navy-900/30">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
@@ -806,6 +812,7 @@ useEffect(() => {
         </div>
       </section>
 
+
       {/* ── CASE STUDIES PREVIEW ────────────────────────────────── */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
@@ -866,6 +873,9 @@ useEffect(() => {
           </div>
         </div>
       </section>
+
+      <ToolsCarousel />
+
 
       {/* ── TESTIMONIALS PREVIEW (from backend) ─────────────────── */}
       <section className="py-20 bg-navy-900/30 border-y border-white/[0.05]">
