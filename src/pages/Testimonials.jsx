@@ -10,6 +10,11 @@ const COLORS = [
 const API_BASE =
   import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
 
+const CARD_HEIGHT = 280;
+const PAGE_SIZE   = 6;
+// Clamp feedback after this many characters
+const FEEDBACK_LIMIT = 180;
+
 function proxyImage(url) {
   if (!url) return null;
   if (!url.includes("notion") && !url.includes("amazonaws")) return url;
@@ -62,20 +67,46 @@ function getClientInfoLine(role, company) {
   return r || c || "";
 }
 
+/* ── Testimonial Card — fixed height, truncated feedback ──────── */
 function TestimonialCard({ t, i, onClick }) {
-  const initials = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials    = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const serviceType = getServiceType(t.tools);
-  const clientInfo = getClientInfoLine(t.clientRole, t.company);
+  const clientInfo  = getClientInfoLine(t.clientRole, t.company);
+  const isTruncated = (t.feedback || "").length > FEEDBACK_LIMIT;
+  const preview     = isTruncated
+    ? t.feedback.slice(0, FEEDBACK_LIMIT).trimEnd() + "…"
+    : t.feedback;
 
   return (
-    <div className="card-glass p-7 flex flex-col gap-4 h-full cursor-pointer hover:border-brand-500/40 transition-all duration-200"
-      onClick={() => onClick(t)}>
-      <div className="flex items-start justify-between">
+    <div
+      className="card-glass p-6 flex flex-col gap-3 cursor-pointer hover:border-brand-500/40 transition-all duration-200"
+      style={{ height: CARD_HEIGHT }}
+      onClick={() => onClick(t)}
+    >
+      {/* Top: stars + tag */}
+      <div className="flex items-start justify-between flex-shrink-0">
         <Stars n={t.rate} />
         {serviceType && <span className="tag text-[9px]">{serviceType.label}</span>}
       </div>
-      <p className="text-blue-100/80 text-[14px] leading-relaxed flex-1">{t.feedback}</p>
-      <div className="flex items-center gap-3 pt-2 border-t border-white/[0.05]">
+
+      {/* Feedback — grows to fill, clamps overflow */}
+      <div className="flex-1 overflow-hidden relative">
+        <p className="text-blue-100/80 text-[13px] leading-relaxed">
+          {preview}
+        </p>
+        {isTruncated && (
+          <div
+            className="absolute bottom-0 left-0 w-full pt-6"
+          >
+            <span className="text-brand-400 text-xs font-medium underline underline-offset-2">
+              View more...
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Footer: avatar + name */}
+      <div className="flex items-center gap-3 pt-2 border-t border-white/[0.05] flex-shrink-0">
         <Avatar src={t.image} initials={initials} color={COLORS[i % COLORS.length]} />
         <div>
           <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
@@ -86,9 +117,9 @@ function TestimonialCard({ t, i, onClick }) {
   );
 }
 
-/* ── Modal — fully theme-aware ──────────────────────────────────── */
+/* ── Modal ────────────────────────────────────────────────────── */
 function Modal({ t, onClose, isDark }) {
-  const initials = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  const initials   = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const clientInfo = getClientInfoLine(t.clientRole, t.company);
 
   useEffect(() => {
@@ -97,7 +128,6 @@ function Modal({ t, onClose, isDark }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Theme tokens
   const modalBg      = isDark ? "rgba(7,14,37,0.97)"      : "rgba(255,255,255,0.97)";
   const modalBorder  = isDark ? "rgba(45,142,245,0.20)"   : "rgba(84,131,179,0.22)";
   const headingColor = isDark ? "#f0f6ff"                 : "#021024";
@@ -116,13 +146,11 @@ function Modal({ t, onClose, isDark }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      {/* Backdrop overlay — first child, separate from modal content */}
       <div
         className="absolute inset-0"
         style={{ background: isDark ? "rgba(0,0,0,0.70)" : "rgba(2,16,36,0.38)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
-      {/* Modal content — second child, never targeted by first-child CSS rules */}
       <div style={{
         position: "relative", width: "100%", maxWidth: "680px",
         background: modalBg,
@@ -136,24 +164,19 @@ function Modal({ t, onClose, isDark }) {
         maxHeight: "90vh",
         backdropFilter: "blur(20px)",
       }}>
-
-        {/* Close button */}
         <button onClick={onClose} style={{
           position: "absolute", top: "16px", right: "16px",
           width: "32px", height: "32px", borderRadius: "50%",
-          background: closeBg, border: "none", cursor: "none",
+          background: closeBg, border: "none", cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: closeColor, fontSize: "13px",
-          transition: "all 0.15s",
+          color: closeColor, fontSize: "13px", transition: "all 0.15s",
         }}
           onMouseEnter={e => { e.currentTarget.style.background = closeHoverBg; e.currentTarget.style.color = headingColor; }}
           onMouseLeave={e => { e.currentTarget.style.background = closeBg; e.currentTarget.style.color = closeColor; }}
         >✕</button>
 
-        {/* Stars */}
         <div className="mb-5"><Stars n={t.rate} /></div>
 
-        {/* Avatar + name */}
         <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "22px" }}>
           <Avatar src={t.image} initials={initials} color={COLORS[0]} />
           <div>
@@ -168,23 +191,16 @@ function Modal({ t, onClose, isDark }) {
           </div>
         </div>
 
-        {/* Feedback text */}
         {t.feedback && (
           <div style={{ marginBottom: "22px" }}>
-            <p style={{
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: "15px", lineHeight: 1.75,
-              color: bodyColor, margin: 0,
-            }}>
+            <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "15px", lineHeight: 1.75, color: bodyColor, margin: 0 }}>
               {t.feedback}
             </p>
           </div>
         )}
 
-        {/* Divider */}
-        <div style={{ height: "1px", background: dividerColor, margin: "22px 0" }}/>
+        <div style={{ height: "1px", background: dividerColor, margin: "22px 0" }} />
 
-        {/* Project Title */}
         {t.projectTitle && (
           <div style={{ marginBottom: "18px" }}>
             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "6px" }}>
@@ -196,7 +212,6 @@ function Modal({ t, onClose, isDark }) {
           </div>
         )}
 
-        {/* Screenshot */}
         {t.rawScreenshot && (
           <div style={{ marginBottom: "18px" }}>
             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "8px" }}>
@@ -209,7 +224,6 @@ function Modal({ t, onClose, isDark }) {
           </div>
         )}
 
-        {/* Tools */}
         {t.tools && t.tools.length > 0 && (
           <div style={{ marginBottom: "18px" }}>
             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "10px" }}>
@@ -220,26 +234,22 @@ function Modal({ t, onClose, isDark }) {
                 <span key={tool} style={{
                   padding: "5px 13px", borderRadius: "999px",
                   fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500,
-                  color: toolColor,
-                  background: toolBg,
-                  border: `1px solid ${toolBorder}`,
+                  color: toolColor, background: toolBg, border: `1px solid ${toolBorder}`,
                 }}>{tool}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Credibility link */}
         {t.credibilityLink && (
           <a href={t.credibilityLink} target="_blank" rel="noopener noreferrer"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
               width: "100%", padding: "12px 24px", marginTop: "8px",
-              background: isDark ? "linear-gradient(135deg,#052659,#021024)" : "linear-gradient(135deg,#052659,#021024)",
-              color: "#C1E8FF",
-              borderRadius: "12px", border: "none",
+              background: "linear-gradient(135deg,#052659,#021024)",
+              color: "#C1E8FF", borderRadius: "12px", border: "none",
               fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: "14px",
-              textDecoration: "none", cursor: "none",
+              textDecoration: "none", cursor: "pointer",
               boxShadow: isDark ? "0 6px 20px rgba(2,16,36,0.50)" : "0 6px 20px rgba(5,38,89,0.25)",
               transition: "all 0.2s",
             }}
@@ -259,12 +269,76 @@ function Modal({ t, onClose, isDark }) {
   );
 }
 
+/* ── Swipeable paginated grid ─────────────────────────────────── */
+function ReviewsGrid({ testimonials, onOpen }) {
+  const [page, setPage]     = useState(0);
+  const touchStartX         = useRef(null);
+  const totalPages          = Math.ceil(testimonials.length / PAGE_SIZE);
+  const slice               = testimonials.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+  }
+
+  function handleTouchEnd(e) {
+    if (touchStartX.current === null) return;
+    const delta = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(delta) < 40) return; // too small — ignore
+    if (delta > 0 && page < totalPages - 1) setPage(p => p + 1); // swipe left → next
+    if (delta < 0 && page > 0)             setPage(p => p - 1); // swipe right → prev
+    touchStartX.current = null;
+  }
+
+  return (
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Grid — always 2 col on sm, 3 col on lg */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        {slice.map((t, i) => (
+          <TestimonialCard
+            key={t.id}
+            t={t}
+            i={page * PAGE_SIZE + i}
+            onClick={onOpen}
+          />
+        ))}
+      </div>
+
+      {/* Page dots — swipe hint */}
+      {totalPages > 1 && (
+        <div className="flex flex-col items-center gap-3 mt-10">
+          <div className="flex gap-2">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setPage(i)}
+                className="transition-all duration-300 rounded-full"
+                style={{
+                  width:      i === page ? 28 : 8,
+                  height:     8,
+                  background: i === page ? "#2d8ef5" : "rgba(45,142,245,0.20)",
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-blue-300/30 text-[11px] font-mono tracking-widest uppercase select-none">
+            swipe to browse
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Page ─────────────────────────────────────────────────────── */
 export default function Testimonials() {
   const { isDark } = useTheme();
   const [testimonials, setTestimonials] = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [active,   setActive]   = useState(0);
-  const [modal,    setModal]    = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [active,       setActive]       = useState(0);
+  const [modal,        setModal]        = useState(null);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -283,6 +357,12 @@ export default function Testimonials() {
     timerRef.current = setInterval(() => setActive(a => (a + 1) % testimonials.length), 4500);
     return () => clearInterval(timerRef.current);
   }, [testimonials]);
+
+  // Lock scroll when modal open
+  useEffect(() => {
+    document.body.style.overflow = modal ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [modal]);
 
   const featured = testimonials[active];
 
@@ -342,7 +422,7 @@ export default function Testimonials() {
                     <button key={i}
                       onClick={e => { e.stopPropagation(); setActive(i); clearInterval(timerRef.current); }}
                       className="transition-all duration-300 rounded-full"
-                      style={{ width: i===active ? 28 : 8, height: 8, background: i===active ? "#2d8ef5" : "rgba(45,142,245,0.2)" }}
+                      style={{ width: i === active ? 28 : 8, height: 8, background: i === active ? "#2d8ef5" : "rgba(45,142,245,0.2)" }}
                     />
                   ))}
                 </div>
@@ -352,20 +432,14 @@ export default function Testimonials() {
         </section>
       )}
 
-      {/* All reviews */}
+      {/* All reviews — paginated + swipeable */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <h2 className="section-title text-white mb-10 text-2xl">All Reviews</h2>
           {loading ? (
             <div className="text-blue-300/50 text-center py-20">Loading testimonials...</div>
           ) : (
-            <div className="columns-1 sm:columns-2 lg:columns-3 gap-5 space-y-5">
-              {testimonials.map((t, i) => (
-                <div key={t.id} className="break-inside-avoid">
-                  <TestimonialCard t={t} i={i} onClick={setModal} />
-                </div>
-              ))}
-            </div>
+            <ReviewsGrid testimonials={testimonials} onOpen={setModal} />
           )}
         </div>
       </section>
@@ -375,10 +449,10 @@ export default function Testimonials() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
             {[
-              { val:"5.0",  label:"Average Rating"    },
-              { val:"100+", label:"Happy Clients"     },
-              { val:"200+", label:"Projects Done"     },
-              { val:"100%", label:"Would Recommend"   },
+              { val: "5.0",  label: "Average Rating"  },
+              { val: "100+", label: "Happy Clients"   },
+              { val: "200+", label: "Projects Done"   },
+              { val: "100%", label: "Would Recommend" },
             ].map(s => (
               <div key={s.label}>
                 <div className="font-display text-4xl font-extrabold stat-number mb-1">{s.val}</div>
