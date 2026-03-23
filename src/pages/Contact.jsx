@@ -1,20 +1,51 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+const API_BASE = import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
 
 const TOPICS = ['General Inquiry', 'Notion Workspace', 'Workflow Automation', 'AI Integration', 'Google Workspace', 'Partnership', 'Other']
 
 export default function Contact() {
-  const [form,    setForm]    = useState({ name:'', email:'', topic:'', message:'' })
-  const [sent,    setSent]    = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [form,      setForm]    = useState({ name:'', email:'', topic:'', message:'' })
+  const [sent,      setSent]    = useState(false)
+  const [loading,   setLoading] = useState(false)
+  const [countdown, setCountdown] = useState(5)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const submit = async e => {
-    e.preventDefault()
-    setLoading(true)
-    await new Promise(r => setTimeout(r, 1200))
-    setSent(true)
-    setLoading(false)
-  }
+  // Auto-reset back to form after 5 seconds
+  useEffect(() => {
+    if (!sent) return
+    setCountdown(5)
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          setSent(false)
+          setForm({ name:'', email:'', topic:'', message:'' })
+          return 5
+        }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [sent])
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSent(true);
+    } catch (err) {
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const input = `w-full bg-navy-800/70 border border-white/[0.09] rounded-xl px-4 py-3 text-white text-sm placeholder-blue-200/25 outline-none transition-all duration-200 focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 font-body`
 
@@ -94,7 +125,12 @@ export default function Contact() {
                   <div className="text-center py-12">
                     <div className="w-16 h-16 rounded-full bg-emerald-400/10 border border-emerald-400/25 flex items-center justify-center text-3xl mx-auto mb-5">✓</div>
                     <h3 className="font-display text-2xl font-extrabold text-white mb-3">Message received!</h3>
-                    <p className="text-blue-200/60 text-sm leading-relaxed max-w-xs mx-auto">We'll get back to you within 24 hours. For faster responses, reach us on WhatsApp.</p>
+                    <p className="text-blue-200/60 text-sm leading-relaxed max-w-xs mx-auto">
+                      We'll get back to you within 24 hours. For faster responses, reach us on WhatsApp.
+                    </p>
+                    <p className="mt-6 font-mono text-[11px] text-blue-200/30 tracking-wider">
+                      Returning to form in <span className="text-brand-400">{countdown}</span>s…
+                    </p>
                   </div>
                 ) : (
                   <form onSubmit={submit} className="space-y-5">
