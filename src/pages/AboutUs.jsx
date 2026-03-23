@@ -5,24 +5,12 @@ const API_BASE = import.meta.env.VITE_API_URL || "";
 const NOTION_PROXY_URL = `${API_BASE}/api/notion-team`;
 
 const SEEDS = [
-  "Alex",
-  "Jordan",
-  "Morgan",
-  "Taylor",
-  "Sam",
-  "Casey",
-  "Riley",
-  "Drew",
+  "Alex", "Jordan", "Morgan", "Taylor",
+  "Sam", "Casey", "Riley", "Drew",
 ];
 const COLORS = [
-  "b6e3f4",
-  "c0aede",
-  "d1f4d1",
-  "ffd5dc",
-  "ffdfbf",
-  "c1e1c5",
-  "d4c5f9",
-  "f4d1b6",
+  "b6e3f4", "c0aede", "d1f4d1", "ffd5dc",
+  "ffdfbf", "c1e1c5", "d4c5f9", "f4d1b6",
 ];
 
 function getAvatar(name, i) {
@@ -31,37 +19,17 @@ function getAvatar(name, i) {
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=${color}`;
 }
 
-// function parseMember(page) {
-//   const props = page.properties;
-//   const name =
-//     props.Name?.title?.[0]?.plain_text ||
-//     props.name?.title?.[0]?.plain_text ||
-//     "Unknown";
-//   const role =
-//     props.Role?.rich_text?.[0]?.plain_text ||
-//     props.role?.rich_text?.[0]?.plain_text ||
-//     props.Role?.select?.name ||
-//     props.role?.select?.name ||
-//     "";
-//   const description =
-//     props.Description?.rich_text?.[0]?.plain_text ||
-//     props.description?.rich_text?.[0]?.plain_text ||
-//     props.Description?.rich_text?.map((r) => r.plain_text).join("") ||
-//     "";
-//   const imageFile = props.Image?.files?.[0] || props.image?.files?.[0];
-//   const image =
-//     imageFile?.type === "external"
-//       ? imageFile.external.url
-//       : imageFile?.file?.url || null;
-//   return { name, role, description, image };
-// }
-
 function parseMember(page) {
   return {
     name: page.name || "Unknown",
     role: page.role || "",
     description: page.description || "",
     image: page.image || null,
+    skills: Array.isArray(page.skills)
+      ? page.skills
+      : typeof page.skills === "string"
+      ? page.skills.split("|").map((s) => s.trim()).filter(Boolean)
+      : [],
   };
 }
 
@@ -88,10 +56,14 @@ const VALUES = [
   },
 ];
 
+const TABS = ["About", "Skills"];
+
 export default function AboutUs() {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [activeTab, setActiveTab] = useState("About");
 
   useEffect(() => {
     async function fetchTeam() {
@@ -100,14 +72,12 @@ export default function AboutUs() {
         setError(null);
 
         const res = await fetch(NOTION_PROXY_URL);
-
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
         const data = await res.json();
 
         const members = (data.results || []).map((p, i) => {
           const parsed = parseMember(p);
-
           return {
             ...parsed,
             img: parsed.image || getAvatar(parsed.name, i),
@@ -117,7 +87,6 @@ export default function AboutUs() {
         members.sort((a, b) => {
           const aL = /leader/i.test(a.role);
           const bL = /leader/i.test(b.role);
-
           return aL && !bL ? -1 : !aL && bL ? 1 : 0;
         });
 
@@ -131,6 +100,17 @@ export default function AboutUs() {
 
     fetchTeam();
   }, []);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = selected ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [selected]);
+
+  function openModal(m) {
+    setSelected(m);
+    setActiveTab("About");
+  }
 
   return (
     <main className="pt-24">
@@ -237,12 +217,18 @@ export default function AboutUs() {
                 </div>
               ))}
 
-            {/* Team Members */}
+            {/* Team Member Cards — fully clickable */}
             {!loading &&
               team.map((m, i) => (
-                <div key={m.name + i} className="card-glass p-7 text-center">
+                <div
+                  key={m.name + i}
+                  onClick={() => openModal(m)}
+                  className="card-glass p-7 text-center flex flex-col items-center cursor-pointer
+                             hover:border-brand-500/40 hover:scale-[1.02] transition-all duration-300"
+                  style={{ height: 400 }}
+                >
                   <div
-                    className="w-18 h-18 mx-auto rounded-full overflow-hidden border-2 border-brand-500/30 mb-4"
+                    className="rounded-full overflow-hidden border-2 border-brand-500/30 mb-4 flex-shrink-0"
                     style={{ width: 122, height: 122 }}
                   >
                     <img
@@ -253,24 +239,137 @@ export default function AboutUs() {
                     />
                   </div>
 
-                  <h3 className="font-display font-bold text-white mb-1">
+                  <h3 className="font-display font-bold text-white mb-1 flex-shrink-0">
                     {m.name}
                   </h3>
 
-                  <span className="tag text-[9px] mb-3 inline-block">
+                  <span className="tag text-[9px] mb-3 inline-block flex-shrink-0">
                     {m.role}
                   </span>
 
                   {m.description && (
-                    <p className="text-blue-300/80 text-sm italic leading-6 mt-2 text-center">
-                      “ {m.description} ”
+                    <p
+                      className="text-blue-300/80 text-sm italic leading-6 text-center overflow-hidden w-full"
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: "vertical",
+                      }}
+                    >
+                      &ldquo; {m.description} &rdquo;
                     </p>
                   )}
+
+                  {/* Subtle hint */}
+                  <span className="mt-auto pt-3 text-[10px] text-brand-400/60 tracking-wide">
+                    view profile ↗
+                  </span>
                 </div>
               ))}
           </div>
         </div>
       </section>
+
+      {/* Member Modal */}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-5"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.65)",
+            backdropFilter: "blur(8px)",
+          }}
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="card-glass w-full max-w-md relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close */}
+            <button
+              onClick={() => setSelected(null)}
+              className="absolute top-4 right-4 z-10 text-blue-300/40 hover:text-white transition-colors duration-200 text-lg leading-none"
+            >
+              ✕
+            </button>
+
+            {/* Top section — always visible */}
+            <div className="flex flex-col items-center text-center px-8 pt-8 pb-5">
+              <div
+                className="rounded-full overflow-hidden border-2 border-brand-500/30 mb-4"
+                style={{ width: 100, height: 100 }}
+              >
+                <img
+                  src={selected.img}
+                  alt={selected.name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <h3 className="font-display font-bold text-white text-xl mb-1">
+                {selected.name}
+              </h3>
+
+              <span className="tag text-[9px] inline-block">
+                {selected.role}
+              </span>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-white/[0.07] mx-8">
+              {TABS.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-5 py-2.5 text-sm font-medium transition-all duration-200 border-b-2 -mb-px ${
+                    activeTab === tab
+                      ? "border-brand-500 text-brand-400"
+                      : "border-transparent text-blue-300/40 hover:text-blue-200/70"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="px-8 py-6 min-h-[140px]">
+              {/* About Tab */}
+              {activeTab === "About" && (
+                <p className="text-blue-300/80 text-sm italic leading-7 text-center">
+                  {selected.description
+                    ? <>&ldquo; {selected.description} &rdquo;</>
+                    : <span className="not-italic text-blue-300/40">No bio available.</span>
+                  }
+                </p>
+              )}
+
+              {/* Skills Tab */}
+              {activeTab === "Skills" && (
+                <div>
+                  {selected.skills && selected.skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selected.skills.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="px-3 py-1.5 rounded-lg text-xs font-medium
+                                     bg-brand-500/10 border border-brand-500/20
+                                     text-brand-300 tracking-wide"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-blue-300/40 text-sm text-center">
+                      No skills listed yet.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CTA */}
       <section className="pb-20">
