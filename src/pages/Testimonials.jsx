@@ -64,6 +64,332 @@ function getClientInfoLine(role, company) {
   return r || c || "";
 }
 
+/* ── Zoomable Image ───────────────────────────────────────────── */
+function ZoomableImage({ src, alt, style, onError }) {
+  const [zoomed, setZoomed] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [origin, setOrigin] = useState({ x: 50, y: 50 });
+  const [dragging, setDragging] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [startDrag, setStartDrag] = useState({ x: 0, y: 0 });
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const imgRef = useRef(null);
+
+  const openZoom = (e) => {
+    e.stopPropagation();
+    setZoomed(true);
+    setScale(1);
+    setPos({ x: 0, y: 0 });
+  };
+
+  const closeZoom = (e) => {
+    e.stopPropagation();
+    setZoomed(false);
+    setScale(1);
+    setPos({ x: 0, y: 0 });
+  };
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = imgRef.current?.getBoundingClientRect();
+    if (rect) {
+      const ox = ((e.clientX - rect.left) / rect.width) * 100;
+      const oy = ((e.clientY - rect.top) / rect.height) * 100;
+      setOrigin({ x: ox, y: oy });
+    }
+    setScale(s => Math.min(Math.max(s - e.deltaY * 0.002, 1), 5));
+  };
+
+  const handleMouseDown = (e) => {
+    if (scale <= 1) return;
+    e.preventDefault();
+    setDragging(true);
+    setStartDrag({ x: e.clientX, y: e.clientY });
+    setStartPos({ ...pos });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!dragging) return;
+    setPos({
+      x: startPos.x + (e.clientX - startDrag.x),
+      y: startPos.y + (e.clientY - startDrag.y),
+    });
+  };
+
+  const handleMouseUp = () => setDragging(false);
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    if (scale > 1) {
+      setScale(1);
+      setPos({ x: 0, y: 0 });
+    } else {
+      const rect = imgRef.current?.getBoundingClientRect();
+      if (rect) {
+        setOrigin({
+          x: ((e.clientX - rect.left) / rect.width) * 100,
+          y: ((e.clientY - rect.top) / rect.height) * 100,
+        });
+      }
+      setScale(2.5);
+    }
+  };
+
+  // Touch pinch-to-zoom support
+  const lastTouchDist = useRef(null);
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastTouchDist.current = Math.hypot(dx, dy);
+    }
+  };
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      if (lastTouchDist.current) {
+        const delta = dist - lastTouchDist.current;
+        setScale(s => Math.min(Math.max(s + delta * 0.01, 1), 5));
+      }
+      lastTouchDist.current = dist;
+    }
+  };
+
+  return (
+    <>
+      {/* Thumbnail — small, clickable to zoom */}
+      <div style={{ position: "relative", display: "inline-block", width: "160px" }}>
+        <img
+          src={src}
+          alt={alt}
+          style={{
+            ...style,
+            width: "160px",
+            height: "auto",
+            cursor: "zoom-in",
+            transition: "box-shadow 0.2s, opacity 0.2s",
+            opacity: 0.92,
+          }}
+          onError={onError}
+          onClick={openZoom}
+          title="Click to zoom"
+        />
+        {/* Zoom hint badge */}
+        <div style={{
+          position: "absolute",
+          bottom: "8px",
+          right: "8px",
+          background: "rgba(0,0,0,0.55)",
+          backdropFilter: "blur(6px)",
+          borderRadius: "8px",
+          padding: "4px 8px",
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          pointerEvents: "none",
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="11" y1="8" x2="11" y2="14"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+          <span style={{
+            fontSize: "10px",
+            color: "rgba(255,255,255,0.75)",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontWeight: 500,
+            letterSpacing: "0.03em",
+          }}>zoom</span>
+        </div>
+      </div>
+
+      {/* Zoom Lightbox */}
+      {zoomed && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.92)",
+            backdropFilter: "blur(12px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+          }}
+          onClick={closeZoom}
+        >
+          {/* Top bar */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "56px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 20px",
+            background: "rgba(0,0,0,0.40)",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            zIndex: 10,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{
+                fontSize: "11px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "rgba(255,255,255,0.45)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}>Upwork Feedback</span>
+              <span style={{
+                fontSize: "11px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "rgba(255,255,255,0.25)",
+              }}>·</span>
+              <span style={{
+                fontSize: "11px",
+                fontFamily: "'JetBrains Mono', monospace",
+                color: "rgba(45,142,245,0.70)",
+              }}>{Math.round(scale * 100)}%</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {/* Zoom out */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setScale(s => Math.max(s - 0.5, 1)); if (scale - 0.5 <= 1) setPos({ x: 0, y: 0 }); }}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)",
+                  color: "rgba(255,255,255,0.65)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+                title="Zoom out"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  <line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+              </button>
+              {/* Zoom in */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setScale(s => Math.min(s + 0.5, 5)); }}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)",
+                  color: "rgba(255,255,255,0.65)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+                title="Zoom in"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  <line x1="11" y1="8" x2="11" y2="14"/>
+                  <line x1="8" y1="11" x2="14" y2="11"/>
+                </svg>
+              </button>
+              {/* Reset */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setScale(1); setPos({ x: 0, y: 0 }); }}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)",
+                  color: "rgba(255,255,255,0.65)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "11px", fontFamily: "monospace",
+                }}
+                title="Reset zoom"
+              >1:1</button>
+              {/* Close */}
+              <button
+                onClick={closeZoom}
+                style={{
+                  width: "32px", height: "32px", borderRadius: "8px",
+                  background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)",
+                  color: "rgba(255,255,255,0.65)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  marginLeft: "4px",
+                }}
+                title="Close (Esc)"
+              >✕</button>
+            </div>
+          </div>
+
+          {/* Hint */}
+          <div style={{
+            position: "absolute",
+            bottom: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.50)",
+            backdropFilter: "blur(6px)",
+            borderRadius: "999px",
+            padding: "6px 14px",
+            fontSize: "11px",
+            fontFamily: "'JetBrains Mono', monospace",
+            color: "rgba(255,255,255,0.35)",
+            letterSpacing: "0.05em",
+            pointerEvents: "none",
+            border: "1px solid rgba(255,255,255,0.07)",
+            whiteSpace: "nowrap",
+          }}>
+            scroll to zoom · drag to pan · double-click to toggle · esc to close
+          </div>
+
+          {/* Image container */}
+          <div
+            style={{
+              overflow: "hidden",
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              paddingTop: "56px",
+              paddingBottom: "48px",
+              cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "zoom-out",
+            }}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={handleWheel}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onDoubleClick={handleDoubleClick}
+          >
+            <img
+              ref={imgRef}
+              src={src}
+              alt={alt}
+              draggable={false}
+              style={{
+                maxWidth: "90%",
+                maxHeight: "100%",
+                borderRadius: "12px",
+                boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
+                transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`,
+                transformOrigin: `${origin.x}% ${origin.y}%`,
+                transition: dragging ? "none" : "transform 0.15s ease",
+                userSelect: "none",
+                willChange: "transform",
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /* ── Testimonial Card — full feedback, View more bottom right ─── */
 function TestimonialCard({ t, i, onClick }) {
   const initials    = (t.displayName || "??").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -200,13 +526,20 @@ function Modal({ t, onClose, isDark }) {
           </div>
         )}
 
+        {/* ── Upwork Feedback — now zoomable ── */}
         {t.rawScreenshot && (
           <div style={{ marginBottom: "18px" }}>
             <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "8px" }}>
               Upwork Feedback
             </p>
-            <img src={proxyImage(t.rawScreenshot)} alt="Feedback screenshot"
-              style={{ width: "100%", borderRadius: "12px", border: `1px solid ${imgBorder}`, display: "block" }}
+            <ZoomableImage
+              src={proxyImage(t.rawScreenshot)}
+              alt="Feedback screenshot"
+              style={{
+                borderRadius: "10px",
+                border: `1px solid ${imgBorder}`,
+                display: "block",
+              }}
               onError={e => { e.currentTarget.style.display = "none"; }}
             />
           </div>
@@ -269,16 +602,11 @@ function shuffleArray(array) {
 
 /* ── 3-Row Responsive Carousel (1 mobile, 2 tablet, 3 desktop) ─ */
 function ReviewsCarousel({ testimonials, onOpen }) {
-  // Randomize testimonials
-  // const shuffled = shuffleArray(testimonials);
-  
-  // Split into 3 rows (will show/hide via CSS)
   const rows = [[], [], []];
   testimonials.forEach((t, i) => {
     rows[i % 2].push(t);
   });
 
-  // Duplicate for seamless scroll
   rows.forEach((row, idx) => {
     if (row.length > 0) {
       rows[idx] = [...row, ...row];
@@ -343,7 +671,6 @@ function ReviewsCarousel({ testimonials, onOpen }) {
       <style>{carouselStyles}</style>
       
       <div className="mask-fade-container flex flex-col gap-5 py-4 overflow-hidden">
-        {/* Row 1 - always visible */}
         <div className="overflow-hidden">
           <div className="carousel-row carousel-row-left">
             {rows[0].map((t, i) => (
@@ -354,7 +681,6 @@ function ReviewsCarousel({ testimonials, onOpen }) {
           </div>
         </div>
 
-        {/* Row 2 - hidden on mobile, visible on md+ */}
         <div className="overflow-hidden hidden md:block">
           <div className="carousel-row carousel-row-right">
             {rows[1].map((t, i) => (
@@ -365,7 +691,6 @@ function ReviewsCarousel({ testimonials, onOpen }) {
           </div>
         </div>
 
-        {/* Row 3 - hidden on tablet/mobile, visible on lg+ */}
         <div className="overflow-hidden hidden lg:block">
           <div className="carousel-row carousel-row-left" style={{ animationDuration: '45s' }}>
             {rows[2].map((t, i) => (
@@ -410,7 +735,6 @@ export default function Testimonials() {
     return () => clearInterval(timerRef.current);
   }, [testimonials]);
 
-  // Lock scroll when modal open
   useEffect(() => {
     document.body.style.overflow = modal ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };

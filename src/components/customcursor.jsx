@@ -17,15 +17,16 @@ export default function CustomCursor() {
     window.addEventListener('mousemove', move)
 
     const tick = () => {
+      // Dot snaps instantly — no lerp needed
       dot.style.transform  = `translate(${mx - 4}px, ${my - 4}px)`
-      rx += (mx - rx) * 0.13
-      ry += (my - ry) * 0.13
+      // Ring follows with a snappier lerp
+      rx += (mx - rx) * 0.25
+      ry += (my - ry) * 0.25
       ring.style.transform = `translate(${rx - 18}px, ${ry - 18}px)`
       raf = requestAnimationFrame(tick)
     }
     tick()
 
-    // Hover interaction
     const onEnter = () => { ring.classList.add('hov'); dot.classList.add('hov') }
     const onLeave = () => { ring.classList.remove('hov'); dot.classList.remove('hov') }
 
@@ -65,7 +66,8 @@ export default function CustomCursor() {
           position: fixed; top: 0; left: 0; z-index: 99999; pointer-events: none;
           width: 8px; height: 8px; border-radius: 50%;
           background: #2d8ef5;
-          transition: transform 0.08s, width 0.2s, height 0.2s, background 0.2s;
+          /* No transform transition — dot must be instant */
+          transition: width 0.2s, height 0.2s, background 0.2s;
           will-change: transform;
         }
         .nn-dot.hov { width: 4px; height: 4px; background: #fff; }
