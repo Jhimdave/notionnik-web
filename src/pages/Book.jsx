@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from './ThemeContext'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com';
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
-
+const API_BASE = import.meta.env.VITE_API_URL;
+const API_KEY = import.meta.env.VITE_API_SECRET;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function getTodayStr() {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-const API_BASE = import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
+const API_BASE = import.meta.env.VITE_API_URL;
+const API_KEY = import.meta.env.VITE_API_SECRET;
 
 const TOPICS = ['General Inquiry', 'Notion Workspace', 'Workflow Automation', 'AI Integration', 'Google Workspace', 'Partnership', 'Other']
 

@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 const NOTION_PROXY_URL = `${API_BASE}/api/notion-team`;
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
+const API_KEY = import.meta.env.VITE_API_SECRET;
 
 const SEEDS = [
   "Alex", "Jordan", "Morgan", "Taylor",

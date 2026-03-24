@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 
-const API_BASE    = import.meta.env.VITE_API_URL || ""
+const API_BASE    = import.meta.env.VITE_API_URL;
 const WEBHOOK_URL = `${API_BASE}/api/chat`
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545"
+const API_KEY = import.meta.env.VITE_API_SECRET;
 
 const BOT_RESPONSES = {
   default: "Hi! I'm NotionBot 🤖 I can help answer questions about our services. What would you like to know?",

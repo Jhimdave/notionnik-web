@@ -5,10 +5,9 @@ import { useTheme } from "./ThemeContext";
 import { ToolsCarousel } from "./ToolsCarousel"
 
 /* ── API Base ─────────────────────────────────────────────── */
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
+const API_BASE =import.meta.env.VITE_API_URL;
 
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545"
+const API_KEY = import.meta.env.VITE_API_SECRET;
 
 /* ── Image Proxy Helper ─────────────────────────────────────── */
 function proxyImage(url) {

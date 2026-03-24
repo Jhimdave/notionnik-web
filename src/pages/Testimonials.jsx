@@ -7,9 +7,8 @@ const COLORS = [
   "#1a5fc0","#5aabff","#2d8ef5","#1a5fc0",
 ];
 
-const API_BASE =
-  import.meta.env.VITE_API_URL || "https://notionnik-backend.onrender.com";
-const API_KEY = "347a8e8a-e6fa-4870-9590-bffef8481545";
+const API_BASE = import.meta.env.VITE_API_URL;
+const API_KEY = import.meta.env.VITE_API_SECRET;
 const PAGE_SIZE   = 6;
 
 function proxyImage(url) {
