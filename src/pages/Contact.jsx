@@ -83,7 +83,7 @@ export default function Contact() {
       )
 
       const channels = [
-        { icon: <WhatsAppIcon />, label: 'WhatsApp', val: '+63 966 367 1854', href: 'https://wa.me/639663671854', note: 'Fastest response' },
+        { icon: <WhatsAppIcon />, label: 'WhatsApp', val: '+63 932 5417 031', href: 'https://wa.me/639325417031', note: 'Fastest response' },
         { icon: <InstagramIcon />, label: 'Instagram', val: '@notionnik', href: 'https://instagram.com/notionnik', note: 'DMs welcome' },
         { icon: <LinkedInIcon />, label: 'LinkedIn', val: 'NotionNik', href: 'https://linkedin.com/company/103721418', note: 'Professional enquiries' },
         { icon: <UpworkIcon />, label: 'Upwork', val: 'View Profile', href: 'https://www.upwork.com/agencies/1768339692736311296/', note: 'Hire via platform' },

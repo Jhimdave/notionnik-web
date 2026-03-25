@@ -1000,7 +1000,7 @@ useEffect(() => {
               </p>
               <div className="space-y-3">
                 {[
-                  { icon: <WhatsAppIcon />, label: "WhatsApp",  val: "+63 966 367 1854", href: "https://wa.me/639663671854"                    },
+                  { icon: <WhatsAppIcon />, label: "WhatsApp",  val: "+63 932 541 7031", href: "https://wa.me/639325417031"                    },
                   { icon: <InstagramIcon />, label: "Instagram", val: "@notionnik",        href: "https://instagram.com/notionnik"               },
                   { icon: <LinkedInIcon />, label: "LinkedIn",  val: "NotionNik",         href: "https://linkedin.com/company/103721418"        },
                 ].map((c) => (
