@@ -343,7 +343,7 @@ export default function BookingPage() {
               </div>
 
               {/* Meeting title */}
-              <div>
+              {/* <div>
                 <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Meeting title</label>
                 <input
                   name="title"
@@ -352,7 +352,7 @@ export default function BookingPage() {
                   placeholder="e.g. Strategy call, Discovery session…"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 text-sm placeholder-gray-300 focus:outline-none focus:border-gray-400 transition-colors"
                 />
-              </div>
+              </div> */}
 
               {/* Date */}
               <div>

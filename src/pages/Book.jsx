@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from './ThemeContext'
 
-const API_BASE = import.meta.env.VITE_API_URL;
-const API_KEY = import.meta.env.VITE_API_SECRET;
+const API_BASE = import.meta.env.VITE_API_URL || 'https://notionnik-backend.onrender.com'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function getTodayStr() {
@@ -21,6 +20,17 @@ function formatTime(isoStr) {
   })
 }
 
+function getMonthData(dateStr) {
+  const date = new Date(dateStr)
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const daysInMonth = lastDay.getDate()
+  const startDayOfWeek = firstDay.getDay()
+  return { year, month, daysInMonth, startDayOfWeek }
+}
+
 /* ── Platform icons ──────────────────────────────────────────────── */
 function MeetIcon() {
   return (
@@ -37,6 +47,139 @@ function ZoomIcon() {
     <svg viewBox="0 0 24 24" className="w-4 h-4 flex-shrink-0" fill="#2D8CFF">
       <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 13.5H8a1.5 1.5 0 01-1.5-1.5V10a1.5 1.5 0 011.5-1.5h6a1.5 1.5 0 011.5 1.5v1.5l2.5-1.5v4l-2.5-1.5V14a1.5 1.5 0 01-1.5 1.5z"/>
     </svg>
+  )
+}
+
+/* ── Calendar Component ─────────────────────────────────────────── */
+function Calendar({ selectedDate, onSelect, isDark }) {
+  const { year, month, daysInMonth, startDayOfWeek } = getMonthData(selectedDate)
+  const today = new Date()
+  const selected = new Date(selectedDate)
+  
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+    'July', 'August', 'September', 'October', 'November', 'December']
+  
+  const days = []
+  for (let i = 0; i < startDayOfWeek; i++) days.push(null)
+  for (let i = 1; i <= daysInMonth; i++) days.push(i)
+
+  const prevMonth = () => {
+    const newDate = new Date(year, month - 1, 1)
+    onSelect(newDate.toISOString().split('T')[0])
+  }
+
+  const nextMonth = () => {
+    const newDate = new Date(year, month + 1, 1)
+    onSelect(newDate.toISOString().split('T')[0])
+  }
+
+  const selectDay = (day) => {
+    const newDate = new Date(year, month, day)
+    onSelect(newDate.toISOString().split('T')[0])
+  }
+
+  const headerColor = isDark ? '#f0f6ff' : '#021024'
+  const dayColor = isDark ? 'rgba(186,220,255,0.65)' : 'rgba(5,38,89,0.62)'
+  const mutedColor = isDark ? 'rgba(125,160,202,0.40)' : 'rgba(84,131,179,0.40)'
+  const bgColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.80)'
+  const borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'
+
+  return (
+    <div style={{
+      background: bgColor,
+      border: `1px solid ${borderColor}`,
+      borderRadius: '16px',
+      padding: '20px',
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '16px',
+      }}>
+        <button onClick={prevMonth} style={{
+          background: 'transparent',
+          border: 'none',
+          color: dayColor,
+          cursor: 'pointer',
+          fontSize: '18px',
+          padding: '4px 8px',
+        }}>←</button>
+        <span style={{
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 700,
+          fontSize: '16px',
+          color: headerColor,
+        }}>
+          {monthNames[month]} {year}
+        </span>
+        <button onClick={nextMonth} style={{
+          background: 'transparent',
+          border: 'none',
+          color: dayColor,
+          cursor: 'pointer',
+          fontSize: '18px',
+          padding: '4px 8px',
+        }}>→</button>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(7, 1fr)',
+        gap: '4px',
+        textAlign: 'center',
+      }}>
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+          <div key={d} style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '11px',
+            fontWeight: 600,
+            color: mutedColor,
+            padding: '8px 0',
+          }}>
+            {d}
+          </div>
+        ))}
+        {days.map((day, i) => {
+          if (!day) return <div key={i} />
+          const currentDate = new Date(year, month, day)
+          const isToday = currentDate.toDateString() === today.toDateString()
+          const isSelected = currentDate.toDateString() === selected.toDateString()
+          const isPast = currentDate < new Date(today.setHours(0,0,0,0))
+          
+          return (
+            <button
+              key={i}
+              onClick={() => !isPast && selectDay(day)}
+              disabled={isPast}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                background: isSelected 
+                  ? 'linear-gradient(135deg,#5483B3,#052659)'
+                  : isToday 
+                    ? 'rgba(45,142,245,0.15)'
+                    : 'transparent',
+                color: isSelected 
+                  ? '#C1E8FF' 
+                  : isPast 
+                    ? mutedColor 
+                    : dayColor,
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontSize: '14px',
+                fontWeight: isSelected || isToday ? 600 : 400,
+                cursor: isPast ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {day}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -113,11 +256,21 @@ function ConfirmationModal({ event, onClose, isDark }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <a href="https://mail.google.com" target="_blank" rel="noreferrer"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              width: '100%', padding: '12px', borderRadius: '12px',
+              background: 'linear-gradient(135deg,#052659,#021024)',
+              color: '#C1E8FF', textDecoration: 'none',
+              fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: '13.5px',
+            }}>
+            📧 Check Gmail for the meeting link
+          </a>
           <button onClick={onClose} style={{
             width: '100%', padding: '12px', borderRadius: '12px',
             background: 'transparent',
             border: `1px solid ${isDark ? 'rgba(255,255,255,0.10)' : 'rgba(5,38,89,0.15)'}`,
-            color: body, cursor: 'none',
+            color: body, cursor: 'pointer',
             fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '13.5px',
           }}>
             Done
@@ -131,7 +284,7 @@ function ConfirmationModal({ event, onClose, isDark }) {
 
 /* ── Step indicator ──────────────────────────────────────────────── */
 function StepDots({ step, isDark }) {
-  const steps = ['Your details', 'Choose time']
+  const steps = ['Choose time', 'Your details']
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
       {steps.map((label, i) => {
@@ -175,7 +328,7 @@ function StepDots({ step, isDark }) {
 export default function Book() {
   const { isDark } = useTheme()
   const [step,           setStep]           = useState(1)
-  const [form,           setForm]           = useState({ name:'', email:'', company:'', title:'', notes:'', date: getTodayStr(), platform:'meet' })
+  const [form,           setForm]           = useState({ name:'', email:'', company:'', notes:'', date: getTodayStr(), platform:'meet' })
   const [slots,          setSlots]          = useState([])
   const [selectedSlot,   setSelectedSlot]   = useState(null)
   const [loadingSlots,   setLoadingSlots]   = useState(false)
@@ -191,11 +344,11 @@ export default function Book() {
     fetch(`${API_BASE}/`).finally(() => setServerWaking(false))
   }, [])
 
-  // Fetch slots when entering step 2 or date changes
+  // Fetch slots when date changes
   useEffect(() => {
-    if (step !== 2 || !form.date) return
+    if (!form.date) return
     fetchSlots(form.date)
-  }, [form.date, step])
+  }, [form.date])
 
   async function fetchSlots(date) {
     setLoadingSlots(true); setSlotsError(''); setSelectedSlot(null); setSlots([])
@@ -211,38 +364,61 @@ export default function Book() {
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
 
-  function handleStep1(e) {
-    e.preventDefault()
-    if (!form.name || !form.email || !form.date) return
+  function handleDateSelect(date) {
+    set('date', date)
+  }
+
+  function handleTimeSelect(slot) {
+    setSelectedSlot(slot)
+  }
+
+  function handleContinueToDetails() {
+    if (!selectedSlot) return
     setStep(2)
   }
 
+  function handleBackToCalendar() {
+    setStep(1)
+  }
+
   async function handleBook() {
-    if (!selectedSlot) return
+    if (!selectedSlot || !form.name || !form.email) return
+    
+    // Generate meeting title: "Appointment Scheduled: {name} x NotionNik"
+    const meetingTitle = `Appointment Scheduled: ${form.name} x NotionNik`
+    
     setBooking(true); setBookingError('')
+    
     // Optimistic modal
     setConfirmedEvent({
       id: 'pending',
-      summary: form.title || `Discovery Call with ${form.name}`,
+      summary: meetingTitle,
       start: { dateTime: selectedSlot.start },
       end:   { dateTime: selectedSlot.end },
       platform: form.platform,
     })
     setBooking(false)
+    
     try {
       const res  = await fetch(`${API_BASE}/api/book`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name, email: form.email,
-          title: form.title || undefined,
+          name: form.name, 
+          email: form.email,
+          title: meetingTitle, // Auto-generated title
           notes: form.notes || form.company ? `Company: ${form.company}\n\n${form.notes}` : undefined,
           platform: form.platform,
-          start: selectedSlot.start, end: selectedSlot.end,
+          start: selectedSlot.start, 
+          end: selectedSlot.end,
         }),
       })
       const data = await res.json()
-      if (!res.ok) { setConfirmedEvent(null); setBookingError(data.error || `Booking failed (${res.status})`); return }
+      if (!res.ok) { 
+        setConfirmedEvent(null); 
+        setBookingError(data.error || `Booking failed (${res.status})`); 
+        return 
+      }
       setConfirmedEvent({ ...data.event, pending: false })
     } catch (err) {
       console.warn('[book] Background update failed:', err.message)
@@ -251,9 +427,12 @@ export default function Book() {
   }
 
   function handleModalClose() {
-    setConfirmedEvent(null); setStep(1)
-    setForm({ name:'', email:'', company:'', title:'', notes:'', date: getTodayStr(), platform:'meet' })
-    setSlots([]); setSelectedSlot(null); setBookingError('')
+    setConfirmedEvent(null); 
+    setStep(1)
+    setForm({ name:'', email:'', company:'', notes:'', date: getTodayStr(), platform:'meet' })
+    setSlots([]); 
+    setSelectedSlot(null); 
+    setBookingError('')
   }
 
   /* ── Shared input style ─────────────────────────────────────── */
@@ -288,7 +467,7 @@ export default function Book() {
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           flex: 1, padding: '10px 14px', borderRadius: '11px',
           fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 600, fontSize: '13px',
-          cursor: 'none', transition: 'all 0.18s',
+          cursor: 'pointer', transition: 'all 0.18s',
           background: active
             ? 'linear-gradient(135deg,#5483B3,#052659)'
             : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.80)'),
@@ -323,7 +502,264 @@ export default function Book() {
         <div className="max-w-7xl mx-auto px-5 md:px-8">
           <div className="grid lg:grid-cols-5 gap-10 items-start">
 
-            {/* ── LEFT SIDEBAR ──────────────────────────────────────── */}
+            {/* ── LEFT: BOOKING FORM ───────────────────────────────── */}
+            <div className="lg:col-span-3">
+              <div className="card-glass p-8 md:p-10">
+
+                <StepDots step={step} isDark={isDark}/>
+
+                {/* ── STEP 1: AVAILABILITY (CALENDLY STYLE) ─────── */}
+                {step === 1 && (
+                  <div>
+                    <h2 style={{ fontFamily:"'Syne', sans-serif", fontWeight:800, fontSize:'20px', color: headText, marginBottom:4 }}>
+                      Select Date & Time
+                    </h2>
+                    <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px', color: bodyText, marginBottom:24 }}>
+                      Choose your preferred meeting slot
+                    </p>
+
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:24 }}>
+                      {/* Left: Big Calendar */}
+                      <div>
+                        <Calendar 
+                          selectedDate={form.date} 
+                          onSelect={handleDateSelect}
+                          isDark={isDark}
+                        />
+                        
+                        {/* Selected date display */}
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          background: isDark ? 'rgba(84,131,179,0.10)' : 'rgba(84,131,179,0.08)',
+                          border: isDark ? '1px solid rgba(84,131,179,0.25)' : '1px solid rgba(84,131,179,0.20)',
+                        }}>
+                          <span style={{ 
+                            fontFamily:"'JetBrains Mono', monospace", 
+                            fontSize:'10px', 
+                            fontWeight:700, 
+                            letterSpacing:'0.12em', 
+                            textTransform:'uppercase', 
+                            color: isDark ? 'rgba(125,160,202,0.70)' : 'rgba(84,131,179,0.80)',
+                            display: 'block',
+                            marginBottom: '4px'
+                          }}>
+                            Selected Date
+                          </span>
+                          <span style={{ 
+                            fontFamily:"'Plus Jakarta Sans', sans-serif", 
+                            fontSize:'14px', 
+                            fontWeight:600, 
+                            color: headText 
+                          }}>
+                            {formatDate(form.date)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Right: Time Slots */}
+                      <div>
+                        <div style={{ marginBottom: '16px' }}>
+                          <span style={{ 
+                            fontFamily:"'JetBrains Mono', monospace", 
+                            fontSize:'10px', 
+                            fontWeight:700, 
+                            letterSpacing:'0.12em', 
+                            textTransform:'uppercase', 
+                            color: isDark ? 'rgba(125,160,202,0.70)' : 'rgba(84,131,179,0.80)',
+                          }}>
+                            Available Times
+                          </span>
+                        </div>
+
+                        {/* Platform indicator */}
+                        <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16 }}>
+                          <span style={{ 
+                            fontFamily:"'JetBrains Mono', monospace", 
+                            fontSize:'9.5px', 
+                            fontWeight:700, 
+                            letterSpacing:'0.14em', 
+                            textTransform:'uppercase', 
+                            color: isDark ? 'rgba(125,160,202,0.55)' : 'rgba(84,131,179,0.70)' 
+                          }}>
+                            Platform
+                          </span>
+                          <span style={{
+                            display:'flex', alignItems:'center', gap:6,
+                            padding:'4px 12px', borderRadius:'999px',
+                            background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(5,38,89,0.07)',
+                            border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(5,38,89,0.12)',
+                            fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'12px', fontWeight:600,
+                            color: headText,
+                          }}>
+                            {form.platform === 'zoom' ? <ZoomIcon/> : <MeetIcon/>}
+                            {form.platform === 'zoom' ? 'Zoom' : 'Google Meet'}
+                          </span>
+                        </div>
+
+                        {/* Platform toggle */}
+                        <div style={{ display:'flex', gap:10, marginBottom:16 }}>
+                          <PlatBtn id="meet" label="Google Meet" Icon={MeetIcon}/>
+                          <PlatBtn id="zoom" label="Zoom"        Icon={ZoomIcon}/>
+                        </div>
+
+                        {/* Slots grid */}
+                        {loadingSlots ? (
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'32px 0', gap:10, color: mutedText, fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px' }}>
+                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            Loading available slots…
+                          </div>
+                        ) : slotsError ? (
+                          <div style={{ textAlign:'center', padding:'32px 0' }}>
+                            <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px', color: isDark ? 'rgba(248,113,113,0.80)' : '#b91c1c', marginBottom:6 }}>{slotsError}</p>
+                            <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'12px', color: mutedText }}>Try picking a different date.</p>
+                          </div>
+                        ) : (
+                          <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:8, maxHeight: '320px', overflowY: 'auto', paddingRight: '4px' }}>
+                            {slots.map(slot => {
+                              const active = selectedSlot?.start === slot.start
+                              return (
+                                <button key={slot.start} onClick={() => handleTimeSelect(slot)}
+                                  style={{
+                                    padding:'12px 16px', borderRadius:'11px', cursor:'pointer',
+                                    fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:600, fontSize:'14px',
+                                    transition:'all 0.18s', textAlign: 'left',
+                                    background: active
+                                      ? 'linear-gradient(135deg,#5483B3,#052659)'
+                                      : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.80)'),
+                                    border: active
+                                      ? '1px solid rgba(84,131,179,0.45)'
+                                      : (isDark ? '1px solid rgba(255,255,255,0.09)' : '1px solid rgba(5,38,89,0.14)'),
+                                    color: active ? '#C1E8FF' : bodyText,
+                                  }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>{formatTime(slot.start)} – {formatTime(slot.end)}</span>
+                                    {active && <span style={{ fontSize: '12px' }}>✓</span>}
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* Selected slot summary */}
+                        {selectedSlot && (
+                          <div style={{
+                            display:'flex', justifyContent:'space-between', alignItems:'center',
+                            padding:'11px 16px', borderRadius:'12px', marginTop:16,
+                            background: isDark ? 'rgba(84,131,179,0.10)' : 'rgba(84,131,179,0.08)',
+                            border: isDark ? '1px solid rgba(84,131,179,0.25)' : '1px solid rgba(84,131,179,0.20)',
+                          }}>
+                            <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:'10px', fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color: isDark ? 'rgba(125,160,202,0.70)' : 'rgba(84,131,179,0.80)' }}>Selected</span>
+                            <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13.5px', fontWeight:700, color: headText }}>
+                              {formatTime(selectedSlot.start)} – {formatTime(selectedSlot.end)}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Continue button */}
+                        <button 
+                          onClick={handleContinueToDetails}
+                          disabled={!selectedSlot}
+                          className="btn-primary" 
+                          style={{ 
+                            width:'100%', 
+                            justifyContent:'center', 
+                            fontSize:'14.5px', 
+                            padding:'13px',
+                            marginTop: '20px',
+                            opacity: !selectedSlot ? 0.45 : 1
+                          }}
+                        >
+                          <span>Continue</span>
+                          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── STEP 2: YOUR DETAILS ───────────────────────── */}
+                {step === 2 && (
+                  <form onSubmit={(e) => { e.preventDefault(); handleBook() }} style={{ display:'flex', flexDirection:'column', gap:18 }}>
+                    <h2 style={{ fontFamily:"'Syne', sans-serif", fontWeight:800, fontSize:'20px', color: headText, marginBottom:4 }}>
+                      Your details
+                    </h2>
+                    
+                    <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px', color: bodyText, marginBottom:8 }}>
+                      {formatDate(form.date)} at {selectedSlot && formatTime(selectedSlot.start)} – {selectedSlot && formatTime(selectedSlot.end)}
+                    </p>
+
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
+                      <div>
+                        <label style={labelStyle}>Name *</label>
+                        <input required value={form.name} onChange={e=>set('name',e.target.value)}
+                          placeholder="Juan dela Cruz" style={inputStyle}
+                          onFocus={e => e.target.style.borderColor = '#5483B3'}
+                          onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Email *</label>
+                        <input required type="email" value={form.email} onChange={e=>set('email',e.target.value)}
+                          placeholder="you@company.com" style={inputStyle}
+                          onFocus={e => e.target.style.borderColor = '#5483B3'}
+                          onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>Company / Business</label>
+                      <input value={form.company} onChange={e=>set('company',e.target.value)}
+                        placeholder="Your company name" style={inputStyle}
+                        onFocus={e => e.target.style.borderColor = '#5483B3'}
+                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>Notes / Project context</label>
+                      <textarea value={form.notes} onChange={e=>set('notes',e.target.value)} rows={4}
+                        placeholder="What workflows are you looking to automate? What tools do you currently use?"
+                        style={{ ...inputStyle, resize:'vertical', minHeight:100, lineHeight:1.65 }}
+                        onFocus={e => e.target.style.borderColor = '#5483B3'}
+                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
+                    </div>
+
+                    {bookingError && (
+                      <p style={{ textAlign:'center', fontSize:'13px', color: isDark ? 'rgba(248,113,113,0.80)' : '#b91c1c', fontFamily:"'Plus Jakarta Sans', sans-serif" }}>
+                        {bookingError}
+                      </p>
+                    )}
+
+                    <div style={{ display:'flex', gap:10, marginTop:8 }}>
+                      <button type="button" onClick={handleBackToCalendar} className="btn-ghost" style={{ flex:1, justifyContent:'center' }}>
+                        ← Back
+                      </button>
+                      <button type="submit" disabled={booking} className="btn-primary"
+                        style={{ flex:2, justifyContent:'center', opacity: booking ? 0.45 : 1 }}>
+                        <span>{booking ? 'Booking…' : 'Confirm Booking'}</span>
+                        {!booking && (
+                          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+
+                    <p style={{ textAlign:'center', fontFamily:"'JetBrains Mono', monospace", fontSize:'10px', color: mutedText, letterSpacing:'0.06em', marginTop:8 }}>
+                      We respond within 24 hours · Your info is never shared
+                    </p>
+                  </form>
+                )}
+              </div>
+            </div>
+
+            {/* ── RIGHT SIDEBAR ─────────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-5">
               {/* Server waking banner */}
               {serverWaking && (
@@ -406,198 +842,6 @@ export default function Book() {
               }}>
                 📅 <strong style={{ color: headText }}>30-minute sessions</strong><br/>
                 Mon–Fri · 10AM – 2AM (Asia/Manila)
-              </div>
-            </div>
-
-            {/* ── RIGHT: BOOKING FORM ───────────────────────────────── */}
-            <div className="lg:col-span-3">
-              <div className="card-glass p-8 md:p-10">
-
-                <StepDots step={step} isDark={isDark}/>
-
-                {/* ── STEP 1 ─────────────────────────────────────── */}
-                {step === 1 && (
-                  <form onSubmit={handleStep1} style={{ display:'flex', flexDirection:'column', gap:18 }}>
-                    <h2 style={{ fontFamily:"'Syne', sans-serif", fontWeight:800, fontSize:'20px', color: headText, marginBottom:4 }}>
-                      Your details
-                    </h2>
-
-                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-                      <div>
-                        <label style={labelStyle}>Name *</label>
-                        <input required value={form.name} onChange={e=>set('name',e.target.value)}
-                          placeholder="Juan dela Cruz" style={inputStyle}
-                          onFocus={e => e.target.style.borderColor = '#5483B3'}
-                          onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                      </div>
-                      <div>
-                        <label style={labelStyle}>Email *</label>
-                        <input required type="email" value={form.email} onChange={e=>set('email',e.target.value)}
-                          placeholder="you@company.com" style={inputStyle}
-                          onFocus={e => e.target.style.borderColor = '#5483B3'}
-                          onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>Meeting title</label>
-                      <input value={form.title} onChange={e=>set('title',e.target.value)}
-                        placeholder="e.g. Notion setup, Automation discovery…" style={inputStyle}
-                        onFocus={e => e.target.style.borderColor = '#5483B3'}
-                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>Preferred date *</label>
-                      <input required type="date" value={form.date} min={getTodayStr()}
-                        onChange={e=>set('date',e.target.value)} style={inputStyle}
-                        onFocus={e => e.target.style.borderColor = '#5483B3'}
-                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>Meeting platform</label>
-                      <div style={{ display:'flex', gap:10 }}>
-                        <PlatBtn id="meet" label="Google Meet" Icon={MeetIcon}/>
-                        <PlatBtn id="zoom" label="Zoom"        Icon={ZoomIcon}/>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label style={labelStyle}>Notes / Project context</label>
-                      <textarea value={form.notes} onChange={e=>set('notes',e.target.value)} rows={4}
-                        placeholder="What workflows are you looking to automate? What tools do you currently use?"
-                        style={{ ...inputStyle, resize:'vertical', minHeight:100, lineHeight:1.65 }}
-                        onFocus={e => e.target.style.borderColor = '#5483B3'}
-                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                    </div>
-
-                    <button type="submit" className="btn-primary" style={{ width:'100%', justifyContent:'center', fontSize:'14.5px', padding:'13px' }}>
-                      <span>See Available Times</span>
-                      <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
-                      </svg>
-                    </button>
-
-                    <p style={{ textAlign:'center', fontFamily:"'JetBrains Mono', monospace", fontSize:'10px', color: mutedText, letterSpacing:'0.06em' }}>
-                      We respond within 24 hours · Your info is never shared
-                    </p>
-                  </form>
-                )}
-
-                {/* ── STEP 2: SLOT PICKER ──────────────────────────── */}
-                {step === 2 && (
-                  <div>
-                    <h2 style={{ fontFamily:"'Syne', sans-serif", fontWeight:800, fontSize:'20px', color: headText, marginBottom:4 }}>
-                      Choose a time
-                    </h2>
-                    <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px', color: bodyText, marginBottom:20 }}>
-                      {formatDate(form.date)}
-                    </p>
-
-                    {/* Platform indicator */}
-                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:18 }}>
-                      <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:'9.5px', fontWeight:700, letterSpacing:'0.14em', textTransform:'uppercase', color: isDark ? 'rgba(125,160,202,0.55)' : 'rgba(84,131,179,0.70)' }}>Platform</span>
-                      <span style={{
-                        display:'flex', alignItems:'center', gap:6,
-                        padding:'4px 12px', borderRadius:'999px',
-                        background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(5,38,89,0.07)',
-                        border: isDark ? '1px solid rgba(255,255,255,0.10)' : '1px solid rgba(5,38,89,0.12)',
-                        fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'12px', fontWeight:600,
-                        color: headText,
-                      }}>
-                        {form.platform === 'zoom' ? <ZoomIcon/> : <MeetIcon/>}
-                        {form.platform === 'zoom' ? 'Zoom' : 'Google Meet'}
-                      </span>
-                    </div>
-
-                    {/* Date changer */}
-                    <div style={{ marginBottom:20 }}>
-                      <label style={labelStyle}>Change date</label>
-                      <input type="date" value={form.date} min={getTodayStr()}
-                        onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                        style={inputStyle}
-                        onFocus={e => e.target.style.borderColor = '#5483B3'}
-                        onBlur={e  => e.target.style.borderColor = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(5,38,89,0.14)'}/>
-                    </div>
-
-                    {/* Slot grid */}
-                    {loadingSlots ? (
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'48px 0', gap:10, color: mutedText, fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px' }}>
-                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                        </svg>
-                        Loading available slots…
-                      </div>
-                    ) : slotsError ? (
-                      <div style={{ textAlign:'center', padding:'48px 0' }}>
-                        <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13px', color: isDark ? 'rgba(248,113,113,0.80)' : '#b91c1c', marginBottom:6 }}>{slotsError}</p>
-                        <p style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'12px', color: mutedText }}>Try picking a different date.</p>
-                      </div>
-                    ) : (
-                      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:20 }}>
-                        {slots.map(slot => {
-                          const active = selectedSlot?.start === slot.start
-                          return (
-                            <button key={slot.start} onClick={() => setSelectedSlot(slot)}
-                              style={{
-                                padding:'10px 8px', borderRadius:'11px', cursor:'none',
-                                fontFamily:"'Plus Jakarta Sans', sans-serif", fontWeight:600, fontSize:'13px',
-                                transition:'all 0.18s',
-                                background: active
-                                  ? 'linear-gradient(135deg,#5483B3,#052659)'
-                                  : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.80)'),
-                                border: active
-                                  ? '1px solid rgba(84,131,179,0.45)'
-                                  : (isDark ? '1px solid rgba(255,255,255,0.09)' : '1px solid rgba(5,38,89,0.14)'),
-                                color: active ? '#C1E8FF' : bodyText,
-                              }}>
-                              {formatTime(slot.start)}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {/* Selected slot summary */}
-                    {selectedSlot && (
-                      <div style={{
-                        display:'flex', justifyContent:'space-between', alignItems:'center',
-                        padding:'11px 16px', borderRadius:'12px', marginBottom:18,
-                        background: isDark ? 'rgba(84,131,179,0.10)' : 'rgba(84,131,179,0.08)',
-                        border: isDark ? '1px solid rgba(84,131,179,0.25)' : '1px solid rgba(84,131,179,0.20)',
-                      }}>
-                        <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:'10px', fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', color: isDark ? 'rgba(125,160,202,0.70)' : 'rgba(84,131,179,0.80)' }}>Selected</span>
-                        <span style={{ fontFamily:"'Plus Jakarta Sans', sans-serif", fontSize:'13.5px', fontWeight:700, color: headText }}>
-                          {formatTime(selectedSlot.start)} – {formatTime(selectedSlot.end)}
-                        </span>
-                      </div>
-                    )}
-
-                    {bookingError && (
-                      <p style={{ textAlign:'center', fontSize:'13px', color: isDark ? 'rgba(248,113,113,0.80)' : '#b91c1c', marginBottom:14, fontFamily:"'Plus Jakarta Sans', sans-serif" }}>
-                        {bookingError}
-                      </p>
-                    )}
-
-                    {/* Actions */}
-                    <div style={{ display:'flex', gap:10 }}>
-                      <button onClick={() => setStep(1)} className="btn-ghost" style={{ flex:1, justifyContent:'center' }}>
-                        ← Back
-                      </button>
-                      <button onClick={handleBook} disabled={!selectedSlot || booking} className="btn-primary"
-                        style={{ flex:2, justifyContent:'center', opacity: (!selectedSlot || booking) ? 0.45 : 1 }}>
-                        <span>{booking ? 'Booking…' : 'Confirm Booking'}</span>
-                        {!booking && (
-                          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
