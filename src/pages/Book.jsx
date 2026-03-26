@@ -7,11 +7,23 @@ const API_KEY = import.meta.env.VITE_API_SECRET;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function getTodayStr() {
-  return new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toDateStr(year, month, day) {
+  // month here is 0-indexed (JS Date month)
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function formatDate(dateStr) {
-  return new Date(dateStr).toLocaleDateString("en-PH", {
+  // Parse as local date to avoid UTC shift
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-PH", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -28,14 +40,13 @@ function formatTime(isoStr) {
 }
 
 function getMonthData(dateStr) {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const [year, month, day] = dateStr.split("-").map(Number);
+  // month is 1-indexed from the string; convert to 0-indexed for JS Date
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
   const daysInMonth = lastDay.getDate();
   const startDayOfWeek = firstDay.getDay();
-  return { year, month, daysInMonth, startDayOfWeek };
+  return { year, month: month - 1, daysInMonth, startDayOfWeek };
 }
 
 /* ── Platform icons ──────────────────────────────────────────────── */
@@ -64,41 +75,40 @@ function ZoomIcon() {
 function Calendar({ selectedDate, onSelect, isDark }) {
   const { year, month, daysInMonth, startDayOfWeek } =
     getMonthData(selectedDate);
-  const today = new Date();
-  const selected = new Date(selectedDate);
+
+  // Today's local date — computed once, never mutated
+  const now = new Date();
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth();
+  const todayDay = now.getDate();
+
+  // Parse selected date into local components for comparison
+  const [selYear, selMonth, selDay] = selectedDate.split("-").map(Number);
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December",
   ];
 
   const days = [];
   for (let i = 0; i < startDayOfWeek; i++) days.push(null);
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
+  // FIX: Build date string manually — no toISOString() so no UTC offset shift
   const prevMonth = () => {
-    const newDate = new Date(year, month - 1, 1);
-    onSelect(newDate.toISOString().split("T")[0]);
+    const d = new Date(year, month - 1, 1);
+    onSelect(toDateStr(d.getFullYear(), d.getMonth(), 1));
   };
 
   const nextMonth = () => {
-    const newDate = new Date(year, month + 1, 1);
-    onSelect(newDate.toISOString().split("T")[0]);
+    const d = new Date(year, month + 1, 1);
+    onSelect(toDateStr(d.getFullYear(), d.getMonth(), 1));
   };
 
   const selectDay = (day) => {
-    const newDate = new Date(year, month, day);
-    onSelect(newDate.toISOString().split("T")[0]);
+    // month is already 0-indexed from getMonthData
+    onSelect(toDateStr(year, month, day));
   };
 
   const headerColor = isDark ? "#f0f6ff" : "#021024";
@@ -186,17 +196,26 @@ function Calendar({ selectedDate, onSelect, isDark }) {
             {d}
           </div>
         ))}
+
         {days.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const currentDate = new Date(year, month, day);
-          const isToday = currentDate.toDateString() === today.toDateString();
+          if (!day) return <div key={`empty-${i}`} />;
+
+          // FIX: Compare using local date components — no Date objects that can UTC-shift
+          const isToday =
+            year === todayYear && month === todayMonth && day === todayDay;
+
           const isSelected =
-            currentDate.toDateString() === selected.toDateString();
-          const isPast = currentDate < new Date(today.setHours(0, 0, 0, 0));
+            year === selYear && month === selMonth - 1 && day === selDay;
+
+          // A day is "past" only if it's strictly before today in local time
+          const isPast =
+            year < todayYear ||
+            (year === todayYear && month < todayMonth) ||
+            (year === todayYear && month === todayMonth && day < todayDay);
 
           return (
             <button
-              key={i}
+              key={`day-${day}`}
               onClick={() => !isPast && selectDay(day)}
               disabled={isPast}
               style={{
@@ -209,7 +228,11 @@ function Calendar({ selectedDate, onSelect, isDark }) {
                   : isToday
                     ? "rgba(45,142,245,0.15)"
                     : "transparent",
-                color: isSelected ? "#C1E8FF" : isPast ? mutedColor : dayColor,
+                color: isSelected
+                  ? "#C1E8FF"
+                  : isPast
+                    ? mutedColor
+                    : dayColor,
                 fontFamily: "'Plus Jakarta Sans', sans-serif",
                 fontSize: "14px",
                 fontWeight: isSelected || isToday ? 600 : 400,
@@ -237,6 +260,11 @@ function ConfirmationModal({ event, onClose, isDark }) {
   const muted = isDark ? "rgba(125,160,202,0.55)" : "rgba(84,131,179,0.70)";
   const divider = isDark ? "rgba(255,255,255,0.06)" : "rgba(84,131,179,0.10)";
   const rowVal = isDark ? "#f0f6ff" : "#021024";
+
+  // Extract date string from the start ISO — use Manila timezone
+  const startDate = new Date(event.start.dateTime).toLocaleDateString("en-CA", {
+    timeZone: "Asia/Manila",
+  }); // yields "YYYY-MM-DD"
 
   return (
     <div
@@ -321,7 +349,7 @@ function ConfirmationModal({ event, onClose, isDark }) {
         >
           {[
             { label: "Event", val: event.summary },
-            { label: "Date", val: formatDate(event.start.dateTime) },
+            { label: "Date", val: formatDate(startDate) },
             {
               label: "Time",
               val: `${formatTime(event.start.dateTime)} – ${formatTime(event.end.dateTime)}`,
@@ -601,7 +629,6 @@ export default function Book() {
   async function handleBook() {
     if (!selectedSlot || !form.name || !form.email) return;
 
-    // Generate meeting title: "Appointment Scheduled: {name} x NotionNik"
     const meetingTitle = `Appointment Scheduled: ${form.name} x NotionNik`;
 
     setBooking(true);
@@ -624,7 +651,7 @@ export default function Book() {
         body: JSON.stringify({
           name: form.name,
           email: form.email,
-          title: meetingTitle, // Auto-generated title
+          title: meetingTitle,
           notes:
             form.notes || form.company
               ? `Company: ${form.company}\n\n${form.notes}`
@@ -766,7 +793,7 @@ export default function Book() {
               <div className="card-glass p-8 md:p-10">
                 <StepDots step={step} isDark={isDark} />
 
-                {/* ── STEP 1: AVAILABILITY (CALENDLY STYLE) ─────── */}
+                {/* ── STEP 1: AVAILABILITY ──────────────────────────── */}
                 {step === 1 && (
                   <div>
                     <h2
@@ -798,7 +825,7 @@ export default function Book() {
                         gap: 24,
                       }}
                     >
-                      {/* Left: Big Calendar */}
+                      {/* Left: Calendar */}
                       <div>
                         <Calendar
                           selectedDate={form.date}

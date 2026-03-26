@@ -17,12 +17,12 @@ export default function CustomCursor() {
     window.addEventListener('mousemove', move)
 
     const tick = () => {
-      // Dot snaps instantly — no lerp needed
-      dot.style.transform  = `translate(${mx - 4}px, ${my - 4}px)`
-      // Ring follows with a snappier lerp
+      // Dot centered on cursor (4px is half of 8px width/height)
+      dot.style.transform  = `translate(${mx}px, ${my}px) translate(-50%, -50%)`
+      // Ring centered on cursor (18px is half of 36px width/height)
       rx += (mx - rx) * 0.25
       ry += (my - ry) * 0.25
-      ring.style.transform = `translate(${rx - 18}px, ${ry - 18}px)`
+      ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`
       raf = requestAnimationFrame(tick)
     }
     tick()
@@ -31,7 +31,7 @@ export default function CustomCursor() {
     const onLeave = () => { ring.classList.remove('hov'); dot.classList.remove('hov') }
 
     const obs = new MutationObserver(() => {
-      document.querySelectorAll('a,button,[role=button]').forEach(el => {
+      document.querySelectorAll('a,button,[role=button],input,textarea,select,[data-cursor-hover]').forEach(el => {
         el.removeEventListener('mouseenter', onEnter)
         el.removeEventListener('mouseleave', onLeave)
         el.addEventListener('mouseenter', onEnter)
@@ -39,7 +39,7 @@ export default function CustomCursor() {
       })
     })
     obs.observe(document.body, { childList: true, subtree: true })
-    document.querySelectorAll('a,button,[role=button]').forEach(el => {
+    document.querySelectorAll('a,button,[role=button],input,textarea,select,[data-cursor-hover]').forEach(el => {
       el.addEventListener('mouseenter', onEnter)
       el.addEventListener('mouseleave', onLeave)
     })
@@ -66,7 +66,6 @@ export default function CustomCursor() {
           position: fixed; top: 0; left: 0; z-index: 99999; pointer-events: none;
           width: 8px; height: 8px; border-radius: 50%;
           background: #2d8ef5;
-          /* No transform transition — dot must be instant */
           transition: width 0.2s, height 0.2s, background 0.2s;
           will-change: transform;
         }

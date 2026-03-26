@@ -15,7 +15,6 @@ import Testimonials    from './pages/Testimonials'
 import AboutUs         from './pages/AboutUs'
 import Book            from './pages/Book'
 import Contact         from './pages/Contact'
-import BookingPage     from './pages/BookingPage'
 import './App.css'
 
 export default function App() {

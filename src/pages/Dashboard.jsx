@@ -93,7 +93,7 @@ function Counter({ target, suffix = "" }) {
   const started = useRef(false);
 
   useEffect(() => {
-    started.current = false; // reset so it re-animates when target changes
+    started.current = false;
   }, [target]);
 
   useEffect(() => {
@@ -415,11 +415,6 @@ const PROCESS = [
   },
 ];
 
-
-
-/* ── Tools Carousel Component ──────────────────────────────── */
-
-
 /* ── Helpers ───────────────────────────────────────────────── */
 function parseService(page) {
   const props = page.properties || {};
@@ -498,31 +493,34 @@ export default function Dashboard() {
   const [testimonialsLoading, setTestimonialsLoading] = useState(true);
   const { isDark } = useTheme();
 
+  // ── Testimonial carousel page ───────────────────────────────
+  const [testimonialPage, setTestimonialPage] = useState(0);
+
   // ── Job Success stat (dynamic from Notion via backend) ──
   const [jobSuccess, setJobSuccess] = useState();
 
-useEffect(() => {
-  fetch(`${API_BASE}/api/website-stats`, {
-    headers: {
-      "x-api-key": API_KEY,
-    },
-  })
-    .then((r) => r.json())
-    .then((data) => { if (data.success) setJobSuccess(data.jobSuccess); })
-    .catch(() => {});
-}, []);
+  useEffect(() => {
+    fetch(`${API_BASE}/api/website-stats`, {
+      headers: {
+        "x-api-key": API_KEY,
+      },
+    })
+      .then((r) => r.json())
+      .then((data) => { if (data.success) setJobSuccess(data.jobSuccess); })
+      .catch(() => {});
+  }, []);
 
   const STATS = [
-    { value: 200,                             suffix: "+",  label: "Projects Completed" },
-    { value: 100,                             suffix: "+",  label: "Happy Clients"       },
-    { value: jobSuccess,                      suffix: "%",  label: "Job Success Rate"    },
+    { value: 200,                             suffix: "+",   label: "Projects Completed" },
+    { value: 100,                             suffix: "+",   label: "Happy Clients"       },
+    { value: jobSuccess,                      suffix: "%",   label: "Job Success Rate"    },
     { value: new Date().getFullYear() - 2022, suffix: "yrs", label: "Experience"          },
   ];
 
   // Fetch services from backend
   useEffect(() => {
     fetch(`${API_BASE}/api/notion-services`, {
-      headers:{
+      headers: {
         "x-api-key": API_KEY,
       },
     })
@@ -541,24 +539,24 @@ useEffect(() => {
       .finally(() => setServicesLoading(false));
   }, []);
 
-  // Fetch testimonials from backend
+  // Fetch testimonials from backend — load ALL (no slice) so carousel can page through them
   useEffect(() => {
-      fetch(`${API_BASE}/api/testimonials`, {
-        headers: {
-          "x-api-key": API_KEY,
-        },
+    fetch(`${API_BASE}/api/testimonials`, {
+      headers: {
+        "x-api-key": API_KEY,
+      },
+    })
+      .then(async (r) => {
+        const text = await r.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          return null;
+        }
       })
-        .then(async (r) => {
-          const text = await r.text();
-          try {
-            return JSON.parse(text);
-          } catch {
-            return null;
-          }
-        })
       .then((res) => {
         if (res?.success) {
-          setTestimonials(res.data.slice(0, 3));
+          setTestimonials(res.data); // ← no slice, keep all for carousel
         } else {
           setTestimonials([]);
         }
@@ -571,7 +569,16 @@ useEffect(() => {
   }, []);
 
   const previewServices = services.slice(0, 3);
-  const previewTestimonials = testimonials.slice(0, 3);
+
+  // ── Carousel helpers ────────────────────────────────────────
+  const ITEMS_PER_PAGE = 3;
+  const totalPages     = Math.max(1, Math.ceil(testimonials.length / ITEMS_PER_PAGE));
+  const canGoPrev      = testimonialPage > 0;
+  const canGoNext      = testimonialPage < totalPages - 1;
+  const pagedTestimonials = testimonials.slice(
+    testimonialPage * ITEMS_PER_PAGE,
+    testimonialPage * ITEMS_PER_PAGE + ITEMS_PER_PAGE,
+  );
 
   return (
     <main>
@@ -703,7 +710,7 @@ useEffect(() => {
           </div>
         </div>
       </section>
-      
+
       {/* ── STATS ───────────────────────────────────────────────── */}
       <section className="py-14 border-y border-white/[0.05] bg-navy-900/30">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
@@ -829,7 +836,6 @@ useEffect(() => {
         </div>
       </section>
 
-
       {/* ── CASE STUDIES PREVIEW ────────────────────────────────── */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
@@ -893,10 +899,11 @@ useEffect(() => {
 
       <ToolsCarousel />
 
-
       {/* ── TESTIMONIALS PREVIEW (from backend) ─────────────────── */}
       <section className="py-20 bg-navy-900/30 border-y border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
+
+          {/* Header row — unchanged */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
             <div className="reveal">
               <p className="section-label">What Clients Say</p>
@@ -908,80 +915,137 @@ useEffect(() => {
               <button className="btn-ghost">View All Reviews →</button>
             </Link>
           </div>
-          <div className="grid md:grid-cols-3 gap-5">
-            {testimonialsLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="card-glass p-7">
-                  <div className="flex gap-0.5 mb-4">
-                    {[...Array(5)].map((_, j) => (
-                      <div key={j} className="w-3 h-3 rounded-full bg-blue-400/20" />
-                    ))}
-                  </div>
-                  <div className="skeleton h-3 w-full rounded mb-2" />
-                  <div className="skeleton h-3 w-4/5 rounded mb-4" />
-                  <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
-                    <div className="skeleton w-9 h-9 rounded-full" />
-                    <div>
-                      <div className="skeleton h-3 w-20 rounded mb-1" />
-                      <div className="skeleton h-2 w-16 rounded" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : previewTestimonials.length > 0 ? (
-              previewTestimonials.map((t, i) => {
-                const serviceType = getServiceType(t.tools);
-                const clientInfo = getClientInfoLine(t.clientRole, t.company);
-                const initials = (t.displayName || "??")
-                  .split(" ")
-                  .map((w) => w[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
 
-                return (
-                  <div
-                    key={t.id || i}
-                    className="card-glass p-7 reveal"
-                    style={{ transitionDelay: `${i * 0.1}s` }}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex gap-0.5">
-                        {[...Array(5)].map((_, j) => (
-                          <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
-                          </svg>
-                        ))}
-                      </div>
-                      {serviceType && (
-                        <span className="tag text-[9px]">{serviceType.label}</span>
-                      )}
+          {/*
+            ┌──────────────────────────────────────────────────────┐
+            │  ←  │         3-column card grid          │  →      │
+            └──────────────────────────────────────────────────────┘
+            Left arrow sits flush at the far left edge of the row,
+            right arrow sits flush at the far right edge.
+            Both are vertically centred to the card grid.
+          */}
+          <div className="flex items-center gap-4">
+
+            {/* ◀ PREV ARROW */}
+            <button
+              onClick={() => setTestimonialPage((p) => Math.max(0, p - 1))}
+              disabled={!canGoPrev}
+              aria-label="Previous testimonials"
+              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* CARD GRID */}
+            <div className="flex-1 grid md:grid-cols-3 gap-5 min-w-0">
+              {testimonialsLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="card-glass p-7">
+                    <div className="flex gap-0.5 mb-4">
+                      {[...Array(5)].map((_, j) => (
+                        <div key={j} className="w-3 h-3 rounded-full bg-blue-400/20" />
+                      ))}
                     </div>
-                    <p className="text-blue-100/80 text-[14px] leading-relaxed mb-5">{t.feedback}</p>
+                    <div className="skeleton h-3 w-full rounded mb-2" />
+                    <div className="skeleton h-3 w-4/5 rounded mb-4" />
                     <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                        <Avatar
-                          src={t.image}
-                          initials={initials}
-                          color={COLORS[i % COLORS.length]}
-                        />
-                      </div>
+                      <div className="skeleton w-9 h-9 rounded-full" />
                       <div>
-                        <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
-                        {clientInfo && (
-                          <p className="text-blue-300/50 text-[11px]">{clientInfo}</p>
+                        <div className="skeleton h-3 w-20 rounded mb-1" />
+                        <div className="skeleton h-2 w-16 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : pagedTestimonials.length > 0 ? (
+                pagedTestimonials.map((t, i) => {
+                  const serviceType = getServiceType(t.tools);
+                  const clientInfo = getClientInfoLine(t.clientRole, t.company);
+                  const initials = (t.displayName || "??")
+                    .split(" ")
+                    .map((w) => w[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                  return (
+                    <div
+                      key={t.id || i}
+                      className="flex card-glass p-7 reveal flex-col justify-between"
+                      style={{ transitionDelay: `${i * 0.1}s` }}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, j) => (
+                            <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
+                            </svg>
+                          ))}
+                        </div>
+                        {serviceType && (
+                          <span className="tag text-[9px]">{serviceType.label}</span>
                         )}
                       </div>
+                      <p className="text-blue-100/80 text-[14px] h-76 leading-relaxed mb-5">{t.feedback}</p>
+                      <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                          <Avatar
+                            src={t.image}
+                            initials={initials}
+                            color={COLORS[i % COLORS.length]}
+                          />
+                        </div>
+                        <div>
+                          <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
+                          {clientInfo && (
+                            <p className="text-blue-300/50 text-[11px]">{clientInfo}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="col-span-3 text-center py-10 text-blue-200/50">
-                No testimonials available
-              </div>
-            )}
+                  );
+                })
+              ) : (
+                <div className="col-span-3 text-center py-10 text-blue-200/50">
+                  No testimonials available
+                </div>
+              )}
+            </div>
+
+            {/* ▶ NEXT ARROW */}
+            <button
+              onClick={() => setTestimonialPage((p) => Math.min(totalPages - 1, p + 1))}
+              disabled={!canGoNext}
+              aria-label="Next testimonials"
+              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
           </div>
+
+          {/* Page indicator dots — only rendered when there is more than 1 page */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setTestimonialPage(i)}
+                  aria-label={`Page ${i + 1}`}
+                  className={`rounded-full transition-all duration-200 ${
+                    i === testimonialPage
+                      ? "w-6 h-2 bg-brand-400"
+                      : "w-2 h-2 bg-white/20 hover:bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+
         </div>
       </section>
 
