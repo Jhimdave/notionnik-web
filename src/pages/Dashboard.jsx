@@ -2,12 +2,32 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useTheme } from "./ThemeContext";
-import { ToolsCarousel } from "./ToolsCarousel"
+import { ToolsCarousel } from "./ToolsCarousel";
 
 /* ── API Base ─────────────────────────────────────────────── */
-const API_BASE =import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const API_KEY = import.meta.env.VITE_API_SECRET;
+
+const TESTIMONIAL_CACHE = "testimonial_cache";
+const SERVICES_CACHE = "services_cache";
+const CACHE_TTL = 60 * 60 * 1000;
+
+function readCache(CACHE_KEY) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed?.data || !parsed?.timestamp) return null;
+
+    if (Date.now() - parsed.timestamp > CACHE_TTL) return null;
+
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
 
 /* ── Image Proxy Helper ─────────────────────────────────────── */
 function proxyImage(url) {
@@ -16,23 +36,23 @@ function proxyImage(url) {
   return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}&api_key=${API_KEY}`;
 }
 
-      const WhatsAppIcon = () => (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-      )
+const WhatsAppIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+  </svg>
+);
 
-      const InstagramIcon = () => (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-        </svg>
-      )
+const InstagramIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+  </svg>
+);
 
-      const LinkedInIcon = () => (
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-        </svg>
-      )
+const LinkedInIcon = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+  </svg>
+);
 
 const COLORS = [
   "#2d8ef5",
@@ -423,7 +443,9 @@ function parseService(page) {
     props.title?.title?.[0]?.plain_text ||
     "Untitled";
   const desc =
-    props["Service Description"]?.rich_text?.map((r) => r.plain_text).join("") ||
+    props["Service Description"]?.rich_text
+      ?.map((r) => r.plain_text)
+      .join("") ||
     props.description?.rich_text?.map((r) => r.plain_text).join("") ||
     "";
   const icon = page.icon?.emoji || "◈";
@@ -464,11 +486,20 @@ function getServiceType(tools) {
   const isOnlyNotion =
     normalizedTools.length === 1 && normalizedTools[0] === "notion";
   if (isOnlyNotion) return { label: "Notion Setup", isAutomation: false };
-  const automationKeywords = ["make", "make.com", "n8n", "apps script", "appscript", "zapier", "automation"];
+  const automationKeywords = [
+    "make",
+    "make.com",
+    "n8n",
+    "apps script",
+    "appscript",
+    "zapier",
+    "automation",
+  ];
   const hasAutomation = normalizedTools.some((tool) =>
     automationKeywords.some((keyword) => tool.includes(keyword)),
   );
-  if (hasAutomation || tools.length > 1) return { label: "Automation", isAutomation: true };
+  if (hasAutomation || tools.length > 1)
+    return { label: "Automation", isAutomation: true };
   return { label: tools[0], isAutomation: false };
 }
 
@@ -506,19 +537,32 @@ export default function Dashboard() {
       },
     })
       .then((r) => r.json())
-      .then((data) => { if (data.success) setJobSuccess(data.jobSuccess); })
+      .then((data) => {
+        if (data.success) setJobSuccess(data.jobSuccess);
+      })
       .catch(() => {});
   }, []);
 
   const STATS = [
-    { value: 200,                             suffix: "+",   label: "Projects Completed" },
-    { value: 100,                             suffix: "+",   label: "Happy Clients"       },
-    { value: jobSuccess,                      suffix: "%",   label: "Job Success Rate"    },
-    { value: new Date().getFullYear() - 2022, suffix: "yrs", label: "Experience"          },
+    { value: 200, suffix: "+", label: "Projects Completed" },
+    { value: 100, suffix: "+", label: "Happy Clients" },
+    { value: jobSuccess, suffix: "%", label: "Job Success Rate" },
+    {
+      value: new Date().getFullYear() - 2022,
+      suffix: "yrs",
+      label: "Experience",
+    },
   ];
 
   // Fetch services from backend
   useEffect(() => {
+    const cached = readCache(SERVICES_CACHE);
+    if (cached) {
+      setServices(cached);
+      setServicesLoading(false);
+      return;
+    }
+
     fetch(`${API_BASE}/api/notion-services`, {
       headers: {
         "x-api-key": API_KEY,
@@ -541,6 +585,13 @@ export default function Dashboard() {
 
   // Fetch testimonials from backend — load ALL (no slice) so carousel can page through them
   useEffect(() => {
+    const cached = readCache(TESTIMONIAL_CACHE);
+    if (cached) {
+      setTestimonials(cached);
+      setTestimonialsLoading(false);
+      return;
+    }
+
     fetch(`${API_BASE}/api/testimonials`, {
       headers: {
         "x-api-key": API_KEY,
@@ -572,9 +623,12 @@ export default function Dashboard() {
 
   // ── Carousel helpers ────────────────────────────────────────
   const ITEMS_PER_PAGE = 3;
-  const totalPages     = Math.max(1, Math.ceil(testimonials.length / ITEMS_PER_PAGE));
-  const canGoPrev      = testimonialPage > 0;
-  const canGoNext      = testimonialPage < totalPages - 1;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(testimonials.length / ITEMS_PER_PAGE),
+  );
+  const canGoPrev = testimonialPage > 0;
+  const canGoNext = testimonialPage < totalPages - 1;
   const pagedTestimonials = testimonials.slice(
     testimonialPage * ITEMS_PER_PAGE,
     testimonialPage * ITEMS_PER_PAGE + ITEMS_PER_PAGE,
@@ -685,10 +739,10 @@ export default function Dashboard() {
                 <Logo size={80} showText={false} theme={isDark} />
               </div>
               {[
-                { angle: 0,   label: "Notion",     icon: "◈", delay: "0s"   },
-                { angle: 90,  label: "Automation", icon: "⟳", delay: "0.5s" },
-                { angle: 180, label: "AI Powered", icon: "⬡", delay: "1s"   },
-                { angle: 270, label: "Google WS",  icon: "⌘", delay: "1.5s" },
+                { angle: 0, label: "Notion", icon: "◈", delay: "0s" },
+                { angle: 90, label: "Automation", icon: "⟳", delay: "0.5s" },
+                { angle: 180, label: "AI Powered", icon: "⬡", delay: "1s" },
+                { angle: 270, label: "Google WS", icon: "⌘", delay: "1.5s" },
               ].map(({ angle, label, icon, delay }) => {
                 const rad = (angle * Math.PI) / 180;
                 const r = 160;
@@ -701,8 +755,12 @@ export default function Dashboard() {
                       animationDelay: delay,
                     }}
                   >
-                    <span className="text-brand-400 text-sm font-mono">{icon}</span>
-                    <span className="text-white text-xs font-semibold whitespace-nowrap">{label}</span>
+                    <span className="text-brand-400 text-sm font-mono">
+                      {icon}
+                    </span>
+                    <span className="text-white text-xs font-semibold whitespace-nowrap">
+                      {label}
+                    </span>
                   </div>
                 );
               })}
@@ -774,7 +832,11 @@ export default function Dashboard() {
                 >
                   <div className="w-11 h-11 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-xl font-mono text-brand-400 mb-5 group-hover:scale-110 transition-transform duration-300">
                     {s.logo ? (
-                      <img src={s.logo} alt={s.title} className="w-6 h-6 object-contain" />
+                      <img
+                        src={s.logo}
+                        alt={s.title}
+                        className="w-6 h-6 object-contain"
+                      />
                     ) : (
                       s.icon || "◈"
                     )}
@@ -783,16 +845,25 @@ export default function Dashboard() {
                     {s.title}
                   </h3>
                   <p className="text-blue-200/55 text-sm leading-relaxed mb-4">
-                    {s.desc || "Custom automation solution tailored to your workflow."}
+                    {s.desc ||
+                      "Custom automation solution tailored to your workflow."}
                   </p>
                   <div className="flex items-center gap-1.5 text-brand-400 text-xs font-semibold">
                     <span>Learn more</span>
                     <svg
-                      width="11" height="11" fill="none" stroke="currentColor"
-                      strokeWidth={2.5} viewBox="0 0 24 24"
+                      width="11"
+                      height="11"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      viewBox="0 0 24 24"
                       className="group-hover:translate-x-1 transition-transform"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 12h14M12 5l7 7-7 7"
+                      />
                     </svg>
                   </div>
                 </button>
@@ -828,8 +899,12 @@ export default function Dashboard() {
                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-navy-400 flex items-center justify-center font-mono text-xs font-bold text-white mb-5 relative z-20">
                   {p.step}
                 </div>
-                <h3 className="font-display font-bold text-white text-[1.05rem] mb-2">{p.title}</h3>
-                <p className="text-blue-200/55 text-sm leading-relaxed">{p.desc}</p>
+                <h3 className="font-display font-bold text-white text-[1.05rem] mb-2">
+                  {p.title}
+                </h3>
+                <p className="text-blue-200/55 text-sm leading-relaxed">
+                  {p.desc}
+                </p>
               </div>
             ))}
           </div>
@@ -855,9 +930,30 @@ export default function Dashboard() {
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { id: "1", icon: "◈", tag: "Notion",     title: "Startup OS",      desc: "Complete business management system", result: "15hrs saved/week" },
-              { id: "2", icon: "⟳", tag: "Automation", title: "Lead Pipeline",   desc: "Automated CRM workflow",              result: "3x faster"       },
-              { id: "3", icon: "⬡", tag: "AI",         title: "Content Engine",  desc: "AI-powered content creation",         result: "10x output"      },
+              {
+                id: "1",
+                icon: "◈",
+                tag: "Notion",
+                title: "Startup OS",
+                desc: "Complete business management system",
+                result: "15hrs saved/week",
+              },
+              {
+                id: "2",
+                icon: "⟳",
+                tag: "Automation",
+                title: "Lead Pipeline",
+                desc: "Automated CRM workflow",
+                result: "3x faster",
+              },
+              {
+                id: "3",
+                icon: "⬡",
+                tag: "AI",
+                title: "Content Engine",
+                desc: "AI-powered content creation",
+                result: "10x output",
+              },
             ].map((cs, i) => (
               <Link
                 key={cs.id}
@@ -875,20 +971,34 @@ export default function Dashboard() {
                   <h3 className="font-display font-bold text-white text-[1.05rem] mb-2 group-hover:text-brand-300 transition-colors">
                     {cs.title}
                   </h3>
-                  <p className="text-blue-200/55 text-sm leading-relaxed">{cs.desc}</p>
+                  <p className="text-blue-200/55 text-sm leading-relaxed">
+                    {cs.desc}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 bg-emerald-400/[0.07] border border-emerald-400/15 rounded-xl px-4 py-2.5">
-                  <span className="font-mono text-[9px] font-bold tracking-widest uppercase text-emerald-400/70">RESULT</span>
-                  <span className="text-emerald-400 font-bold text-sm">{cs.result}</span>
+                  <span className="font-mono text-[9px] font-bold tracking-widest uppercase text-emerald-400/70">
+                    RESULT
+                  </span>
+                  <span className="text-emerald-400 font-bold text-sm">
+                    {cs.result}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 text-brand-400 text-sm font-semibold mt-auto">
                   <span>Read Full Story</span>
                   <svg
-                    width="13" height="13" fill="none" stroke="currentColor"
-                    strokeWidth={2.5} viewBox="0 0 24 24"
+                    width="13"
+                    height="13"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    viewBox="0 0 24 24"
                     className="group-hover:translate-x-1 transition-transform"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 12h14M12 5l7 7-7 7"
+                    />
                   </svg>
                 </div>
               </Link>
@@ -902,7 +1012,6 @@ export default function Dashboard() {
       {/* ── TESTIMONIALS PREVIEW (from backend) ─────────────────── */}
       <section className="py-20 bg-navy-900/30 border-y border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-5 md:px-8">
-
           {/* Header row — unchanged */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
             <div className="reveal">
@@ -925,7 +1034,6 @@ export default function Dashboard() {
             Both are vertically centred to the card grid.
           */}
           <div className="flex items-center gap-4">
-
             {/* ◀ PREV ARROW */}
             <button
               onClick={() => setTestimonialPage((p) => Math.max(0, p - 1))}
@@ -933,8 +1041,19 @@ export default function Dashboard() {
               aria-label="Previous testimonials"
               className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
             >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              <svg
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15 19l-7-7 7-7"
+                />
               </svg>
             </button>
 
@@ -945,7 +1064,10 @@ export default function Dashboard() {
                   <div key={i} className="card-glass p-7">
                     <div className="flex gap-0.5 mb-4">
                       {[...Array(5)].map((_, j) => (
-                        <div key={j} className="w-3 h-3 rounded-full bg-blue-400/20" />
+                        <div
+                          key={j}
+                          className="w-3 h-3 rounded-full bg-blue-400/20"
+                        />
                       ))}
                     </div>
                     <div className="skeleton h-3 w-full rounded mb-2" />
@@ -979,16 +1101,26 @@ export default function Dashboard() {
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex gap-0.5">
                           {[...Array(5)].map((_, j) => (
-                            <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b">
+                            <svg
+                              key={j}
+                              width="13"
+                              height="13"
+                              viewBox="0 0 24 24"
+                              fill="#f59e0b"
+                            >
                               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z" />
                             </svg>
                           ))}
                         </div>
                         {serviceType && (
-                          <span className="tag text-[9px]">{serviceType.label}</span>
+                          <span className="tag text-[9px]">
+                            {serviceType.label}
+                          </span>
                         )}
                       </div>
-                      <p className="text-blue-100/80 text-[14px] h-76 leading-relaxed mb-5">{t.feedback}</p>
+                      <p className="text-blue-100/80 text-[14px] h-76 leading-relaxed mb-5">
+                        {t.feedback}
+                      </p>
                       <div className="flex items-center gap-3 pt-4 border-t border-white/[0.05]">
                         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-navy-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
                           <Avatar
@@ -998,9 +1130,13 @@ export default function Dashboard() {
                           />
                         </div>
                         <div>
-                          <p className="font-display font-bold text-white text-sm">{t.displayName}</p>
+                          <p className="font-display font-bold text-white text-sm">
+                            {t.displayName}
+                          </p>
                           {clientInfo && (
-                            <p className="text-blue-300/50 text-[11px]">{clientInfo}</p>
+                            <p className="text-blue-300/50 text-[11px]">
+                              {clientInfo}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -1016,16 +1152,28 @@ export default function Dashboard() {
 
             {/* ▶ NEXT ARROW */}
             <button
-              onClick={() => setTestimonialPage((p) => Math.min(totalPages - 1, p + 1))}
+              onClick={() =>
+                setTestimonialPage((p) => Math.min(totalPages - 1, p + 1))
+              }
               disabled={!canGoNext}
               aria-label="Next testimonials"
               className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
             >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              <svg
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </button>
-
           </div>
 
           {/* Page indicator dots — only rendered when there is more than 1 page */}
@@ -1045,7 +1193,6 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-
         </div>
       </section>
 
@@ -1064,9 +1211,24 @@ export default function Dashboard() {
               </p>
               <div className="space-y-3">
                 {[
-                  { icon: <WhatsAppIcon />, label: "WhatsApp",  val: "+63 932 541 7031", href: "https://wa.me/639325417031"                    },
-                  { icon: <InstagramIcon />, label: "Instagram", val: "@notionnik",        href: "https://instagram.com/notionnik"               },
-                  { icon: <LinkedInIcon />, label: "LinkedIn",  val: "NotionNik",         href: "https://linkedin.com/company/103721418"        },
+                  {
+                    icon: <WhatsAppIcon />,
+                    label: "WhatsApp",
+                    val: "+63 932 541 7031",
+                    href: "https://wa.me/639325417031",
+                  },
+                  {
+                    icon: <InstagramIcon />,
+                    label: "Instagram",
+                    val: "@notionnik",
+                    href: "https://instagram.com/notionnik",
+                  },
+                  {
+                    icon: <LinkedInIcon />,
+                    label: "LinkedIn",
+                    val: "NotionNik",
+                    href: "https://linkedin.com/company/103721418",
+                  },
                 ].map((c) => (
                   <a
                     key={c.label}
@@ -1077,15 +1239,25 @@ export default function Dashboard() {
                   >
                     <span className="text-xl">{c.icon}</span>
                     <div className="flex-1">
-                      <span className="font-mono text-[10px] text-blue-400/50 tracking-widest uppercase block">{c.label}</span>
+                      <span className="font-mono text-[10px] text-blue-400/50 tracking-widest uppercase block">
+                        {c.label}
+                      </span>
                       <span className="text-blue-200/70 text-sm">{c.val}</span>
                     </div>
                     <svg
-                      width="12" height="12" fill="none" stroke="currentColor"
-                      strokeWidth={2.5} viewBox="0 0 24 24"
+                      width="12"
+                      height="12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      viewBox="0 0 24 24"
                       className="text-blue-400/30 group-hover:text-brand-400 group-hover:translate-x-1 transition-all"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 12h14M12 5l7 7-7 7"
+                      />
                     </svg>
                   </a>
                 ))}
@@ -1108,11 +1280,15 @@ export default function Dashboard() {
               <div className="w-[500px] h-[300px] rounded-full bg-brand-500/10 blur-[80px]" />
             </div>
             <div className="relative z-10">
-              <p className="section-label justify-center mb-4">Ready to Start</p>
+              <p className="section-label justify-center mb-4">
+                Ready to Start
+              </p>
               <h2 className="section-title text-white mb-4">
                 Let's automate
                 <br />
-                <span className="gradient-text-blue">your entire business.</span>
+                <span className="gradient-text-blue">
+                  your entire business.
+                </span>
               </h2>
               <p className="text-blue-200/60 text-base leading-relaxed max-w-md mx-auto mb-8">
                 Book a free 30-minute discovery call. We'll map exactly where
@@ -1122,10 +1298,18 @@ export default function Dashboard() {
                 <button className="btn-primary text-base px-8 py-4">
                   <span>Book Free Consultation</span>
                   <svg
-                    width="16" height="16" fill="none" stroke="currentColor"
-                    strokeWidth={2.5} viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 12h14M12 5l7 7-7 7"
+                    />
                   </svg>
                 </button>
               </Link>

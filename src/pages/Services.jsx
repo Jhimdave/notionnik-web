@@ -5,6 +5,34 @@ import { SERVICES_DATA } from '../data'
 const API_BASE = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_SECRET;
 
+/* ── Cache config ──────────────────────────────────────────────────
+   Key  : localStorage key name
+   TTL  : how long cached data is valid (1 hour)
+   ─────────────────────────────────────────────────────────────── */
+const CACHE_KEY = "services_cache";
+const CACHE_TTL = 60 * 60 * 1000;
+
+/* ── Cache helpers ─────────────────────────────────────────────── */
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { data, timestamp } = JSON.parse(raw);
+    if (Date.now() - timestamp > CACHE_TTL) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(data) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
+  } catch {
+    // Silently fail if localStorage is full or unavailable
+  }
+}
+
 function parseService(page) {
   const props = page.properties || {}
   const title = props.Title?.title?.[0]?.plain_text || props.title?.title?.[0]?.plain_text || 'Untitled'
@@ -23,14 +51,12 @@ function ServiceModal({ service, onClose }) {
     return () => { document.body.style.overflow = ''; window.removeEventListener('keydown', esc) }
   }, [onClose])
 
-  // Match with static data if available
   const staticData = SERVICES_DATA.find(s => s.title.toLowerCase().includes(service.title.toLowerCase().split(' ')[0]))
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-xl max-h-[85vh] flex flex-col bg-navy-900 border border-brand-500/25 rounded-3xl shadow-brand-lg overflow-hidden">
-        {/* Header */}
         <div className="flex items-start justify-between p-7 pb-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-4">
             {service.logo
@@ -46,12 +72,10 @@ function ServiceModal({ service, onClose }) {
         </div>
 
         <div className="overflow-y-auto p-7 space-y-6">
-          {/* Description */}
           <p className="text-blue-100/75 leading-relaxed">
             {staticData?.long || service.desc || 'Professional service tailored to your workflow.'}
           </p>
 
-          {/* Features */}
           {staticData?.features && (
             <div>
               <p className="font-mono text-[10px] font-semibold tracking-widest text-brand-400/70 uppercase mb-3">What's included</p>
@@ -68,7 +92,6 @@ function ServiceModal({ service, onClose }) {
             </div>
           )}
 
-          {/* Tools */}
           {staticData?.tools && (
             <div>
               <p className="font-mono text-[10px] font-semibold tracking-widest text-brand-400/70 uppercase mb-3">Tools Used</p>
@@ -80,7 +103,6 @@ function ServiceModal({ service, onClose }) {
             </div>
           )}
 
-          {/* CTA */}
           <div className="pt-2">
             <Link to="/book" onClick={onClose}>
               <button className="btn-primary w-full justify-center text-sm py-3.5">
@@ -134,17 +156,29 @@ export default function Services() {
   const [page,     setPage]     = useState(0)
   const PER = 6
 
-useEffect(() => {
-  fetch(`${API_BASE}/api/notion-services`, {
-    headers: {
-      "x-api-key": API_KEY,
-    },
-  })
-    .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
-    .then(d => setServices((d.results||[]).map(parseService)))
-    .catch(() => setServices(SERVICES_DATA.map(s => ({ ...s, id: s.id }))))
-    .finally(() => setLoading(false))
-}, [])
+  useEffect(() => {
+    /* ── 1. Try localStorage first ──────────────────────────────── */
+    const cached = readCache()
+    if (cached) {
+      setServices(cached)
+      setLoading(false)
+      return
+    }
+
+    /* ── 2. No valid cache — fetch from backend ──────────────────── */
+    fetch(`${API_BASE}/api/notion-services`, {
+      headers: { "x-api-key": API_KEY },
+    })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
+      .then(d => {
+        const parsed = (d.results || []).map(parseService)
+        setServices(parsed)
+        /* ── 3. Save fresh data to localStorage ─────────────────── */
+        writeCache(parsed)
+      })
+      .catch(() => setServices(SERVICES_DATA.map(s => ({ ...s, id: s.id }))))
+      .finally(() => setLoading(false))
+  }, [])
 
   const total   = Math.ceil(services.length / PER)
   const current = services.slice(page*PER, page*PER+PER)
@@ -170,7 +204,6 @@ useEffect(() => {
             }
           </div>
 
-          {/* Pagination dots */}
           {!loading && total > 1 && (
             <div className="flex items-center justify-center gap-2 mt-10">
               <button disabled={page===0} onClick={() => setPage(p=>p-1)}
