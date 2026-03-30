@@ -11,7 +11,7 @@ const API_KEY = import.meta.env.VITE_API_SECRET;
    TTL  : how long cached data is considered fresh (1 hour = 3600000ms)
    ─────────────────────────────────────────────────────────────── */
 const CACHE_KEY = "notionnik_team_cache";
-const CACHE_TTL = 60 * 60 * 1000; // 1 hour in ms
+const CACHE_TTL = 15 * 60 * 1000; // 1 hour in ms
 
 /* ── Cache helpers ─────────────────────────────────────────────── */
 function readCache() {

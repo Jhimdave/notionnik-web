@@ -18,7 +18,7 @@ const API_KEY = import.meta.env.VITE_API_SECRET;
 const PAGE_SIZE = 6;
 
 const CACHE_KEY = "testimonial_cache";
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000;
 
 function writeCache(data) {
   try {

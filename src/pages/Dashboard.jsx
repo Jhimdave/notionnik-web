@@ -11,7 +11,7 @@ const API_KEY = import.meta.env.VITE_API_SECRET;
 
 const TESTIMONIAL_CACHE = "testimonial_cache";
 const SERVICES_CACHE = "services_cache";
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000;
 
 function readCache(CACHE_KEY) {
   try {

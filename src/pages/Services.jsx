@@ -10,7 +10,7 @@ const API_KEY = import.meta.env.VITE_API_SECRET;
    TTL  : how long cached data is valid (1 hour)
    ─────────────────────────────────────────────────────────────── */
 const CACHE_KEY = "services_cache";
-const CACHE_TTL = 60 * 60 * 1000;
+const CACHE_TTL = 15 * 60 * 1000;
 
 /* ── Cache helpers ─────────────────────────────────────────────── */
 function readCache() {
@@ -118,16 +118,20 @@ function ServiceModal({ service, onClose }) {
 
 function ServiceCard({ s, i, onClick }) {
   return (
-    <button onClick={() => onClick(s)} className="card-glass p-7 text-left w-full group">
-      <div className="flex items-start justify-between mb-5">
+    <button onClick={() => onClick(s)} className="flex flex-col justify-between card-glass p-7 text-left w-full group h-80">
+      <div>
+        <div className="flex items-start justify-between mb-8">
         {s.logo
           ? <img src={s.logo} alt={s.title} className="w-11 h-11 rounded-xl object-contain" />
           : <div className="w-11 h-11 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-xl font-mono text-brand-400 group-hover:scale-110 transition-transform duration-300">{s.icon}</div>
         }
         <span className="font-mono text-[11px] font-semibold text-blue-400/40">{String(i+1).padStart(2,'0')}</span>
       </div>
-      <h3 className="font-display font-bold text-white text-[1.03rem] mb-2 group-hover:text-brand-300 transition-colors">{s.title}</h3>
+      <div>
+        <h3 className="font-display font-bold text-white text-[1.03rem] mb-2 group-hover:text-brand-300 transition-colors">{s.title}</h3>
       <p className="text-blue-200/55 text-sm leading-relaxed mb-4">{s.desc || 'Custom automation solution tailored to your workflow.'}</p>
+      </div>
+      </div>
       <div className="flex items-center gap-1.5 text-brand-400 text-xs font-semibold">
         <span>Learn more</span>
         <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24" className="group-hover:translate-x-1 transition-transform">
