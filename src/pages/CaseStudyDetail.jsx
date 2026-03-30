@@ -65,19 +65,6 @@ export default function CaseStudyDetail() {
           {cs.title}
         </h1>
         <p className="text-blue-200/65 text-lg leading-relaxed mb-8 max-w-2xl">{cs.subtitle}</p>
-
-        {/* Metrics row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {cs.metrics.map(m => (
-            <div key={m.label} className="bg-navy-800/70 border border-white/[0.07] rounded-2xl p-5 text-center">
-              <div className="font-display text-2xl font-extrabold text-white mb-1" style={{
-                background: 'linear-gradient(135deg, #fff, #5aabff)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-              }}>{m.value}</div>
-              <p className="font-mono text-[10px] tracking-widest uppercase text-blue-400/55">{m.label}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Divider */}
@@ -141,6 +128,23 @@ export default function CaseStudyDetail() {
           <div className="bg-emerald-400/[0.06] border border-emerald-400/15 rounded-2xl p-7">
             <p className="text-blue-100/80 leading-[1.85] text-[15px]">{cs.outcome}</p>
           </div>
+        </section>
+
+        <div className="max-w-4xl mx-auto px-5 md:px-8 mb-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-brand-500/30 to-transparent" />
+      </div>
+
+        {/* Metrics row */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {cs.metrics.map(m => (
+            <div key={m.label} className="bg-navy-800/70 border border-white/[0.07] rounded-2xl p-5 text-center">
+              <div className="font-display text-2xl font-extrabold text-white mb-1" style={{
+                background: 'linear-gradient(135deg, #fff, #5aabff)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>{m.value}</div>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-blue-400/55">{m.label}</p>
+            </div>
+          ))}
         </section>
 
         {/* Image Carousel Section */}

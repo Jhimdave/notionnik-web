@@ -34,7 +34,7 @@ function ServiceModal({ service, onClose }) {
         <div className="flex items-start justify-between p-7 pb-5 border-b border-white/[0.06]">
           <div className="flex items-center gap-4">
             {service.logo
-              ? <img src={service.logo} alt={service.title} className="w-12 h-12 rounded-xl object-contain" />
+              ? <img src={service.logo} alt={service.title} className="w-12 h-12 rounded-l object-contain" />
               : <div className="w-12 h-12 rounded-xl bg-brand-500/15 border border-brand-500/25 flex items-center justify-center text-2xl font-mono text-brand-400">{service.icon}</div>
             }
             <div>
