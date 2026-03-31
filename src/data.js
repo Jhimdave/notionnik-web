@@ -242,3 +242,43 @@ export const SERVICES_DATA = [
     tools: ['Miro', 'Notion', 'Loom'],
   },
 ]
+
+// ── FAQs ──────────────────────────────────────────────────────────────────
+export const FAQS = [
+  {
+    q: "What exactly does NotionNik do?",
+    a: "We build custom Notion workspaces and automation systems that eliminate repetitive manual work from your business. Think CRMs, project management systems, AI integrations, and multi-tool workflows — all engineered to run smoothly without constant babysitting."
+  },
+  {
+    q: "Do I need to know Notion to work with you?",
+    a: "Not at all. We handle everything from scratch — design, build, and training. By the end of the project you'll have a system you fully understand and can maintain yourself. We also provide documentation and 30-day post-launch support."
+  },
+  {
+    q: "How long does a typical project take?",
+    a: "Most Notion workspace projects are delivered in 1–3 weeks. Automation and AI integration projects typically take 2–6 weeks depending on complexity. We'll give you a clear timeline during the free discovery call before any work begins."
+  },
+  {
+    q: "What tools do you integrate with?",
+    a: "Our core stack includes Notion, Make (Integromat), n8n, Zapier, Google Workspace (Sheets, Docs, Gmail, Drive), OpenAI, Slack, and most REST APIs. If you use a specific tool, ask us — we've likely integrated it before."
+  },
+  {
+    q: "How much does it cost?",
+    a: "Pricing depends on scope and complexity. Simple Notion setups start lower, while full automation stacks are higher. We always provide a fixed-price quote after the discovery call — no hidden fees, no surprises."
+  },
+  {
+    q: "What happens after the project is delivered?",
+    a: "Every project includes a handover session, full documentation, and 30 days of support for questions or minor adjustments. If you want ongoing maintenance or to expand the system later, we offer retainer packages too."
+  },
+  {
+    q: "Can you work with an existing Notion workspace?",
+    a: "Yes. We regularly audit and restructure existing workspaces. We'll map what you have, identify what's working and what isn't, then redesign around your actual workflow rather than starting from scratch unnecessarily."
+  },
+  {
+    q: "Is the discovery call really free?",
+    a: "100% free, no strings attached. The 30-minute call is for us to understand your workflow and for you to see if we're the right fit. You'll leave with actionable clarity even if we don't end up working together."
+  },
+  {
+    q: "Do you work with teams or solo founders?",
+    a: "Both. We've built systems for solo operators who need to automate everything themselves, and for teams of 50+ who need role-based workflows, permission structures, and collaborative databases. We design for your actual team size."
+  },
+]

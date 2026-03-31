@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Logo from "../components/Logo";
 import { useTheme } from "./ThemeContext";
 import { ToolsCarousel } from "./ToolsCarousel";
+import FAQSection from "../components/FAQSection";
 
 /* ── API Base ─────────────────────────────────────────────── */
 const API_BASE = import.meta.env.VITE_API_URL;
@@ -1271,6 +1272,9 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      {/* ── FAQS ─────────────────────────────────────────────────── */}
+      <FAQSection isDark={isDark} />
 
       {/* ── BOOK CTA ─────────────────────────────────────────────── */}
       <section className="py-16 pb-24">
