@@ -16,6 +16,7 @@ import AboutUs         from './pages/AboutUs'
 import Book            from './pages/Book'
 import Contact         from './pages/Contact'
 import './App.css'
+import ChatBox from './components/AiAgent'
 
 export default function App() {
   const [openChat, setOpenChat] = useState(false)
@@ -42,6 +43,7 @@ export default function App() {
           <Footer />
           <PeepingRobot onOpenChat={() => setOpenChat(true)} />
           <Chatbot forceOpen={openChat} onOpened={() => setOpenChat(false)} />
+          <ChatBox forceOpen={openChat} onOpened={() => setOpenChat(false)}/>
         </div>
       </ThemeProvider>
     </Router>
