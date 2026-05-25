@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
-const API_KEY  = "notionnik2026itsolutions";
+const API_KEY  = import.meta.env.VITE_API_CLIENT_KEY;
 
 const CATEGORIES = [
   "Notion x Automation",
   "Notion Setup",
   "Google App Script",
   "Consultation",
+  "Website Development",
+  "Automation",
 ];
 
 const TOOLS_LIST = [
@@ -17,6 +19,11 @@ const TOOLS_LIST = [
   "Zapier",
   "Make",
   "Airtable",
+  "Go High Level",
+  "CRM",
+  "Slack",
+  "React",
+  "TailwindCSS"
 ];
 
 const STATUSES = ["To Gather Data", "Screenshot Editing", "Done"];
