@@ -162,6 +162,11 @@ function ClientCard({ client, onClear }) {
         <p style={{ margin: 0, fontSize: 12, color: "#6b7280" }}>
           {[client.role, client.company].filter(Boolean).join(" · ")}
         </p>
+        {client.displayName && (
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9ca3af" }}>
+            Display: {client.displayName}
+          </p>
+        )}
       </div>
       <button
         onClick={onClear}
@@ -170,6 +175,77 @@ function ClientCard({ client, onClear }) {
       >
         ×
       </button>
+    </div>
+  );
+}
+
+// ── Contract Title Field ──────────────────────────────────────────
+// Shows a dropdown pre-populated with the client's contract title,
+// plus a "Custom…" option that reveals a free-text input.
+function ContractTitleField({ clientContractTitle, value, onChange }) {
+  const [useCustom, setUseCustom] = useState(false);
+
+  // When client changes, reset to their contract title
+  useEffect(() => {
+    setUseCustom(false);
+  }, [clientContractTitle]);
+
+  if (!clientContractTitle) {
+    // No client selected or client has no contract title — plain text input
+    return (
+      <input
+        style={inputStyle}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="e.g. 60 minute consultation"
+      />
+    );
+  }
+
+  if (useCustom) {
+    return (
+      <div style={{ display: "flex", gap: 6 }}>
+        <input
+          style={{ ...inputStyle, flex: 1 }}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter custom contract title…"
+          autoFocus
+        />
+        <button
+          onClick={() => { setUseCustom(false); onChange(clientContractTitle); }}
+          style={{
+            padding: "8px 10px", fontSize: 12, border: "1px solid #e5e7eb",
+            borderRadius: 8, background: "#f9fafb", color: "#6b7280",
+            cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+          }}
+        >
+          ← Use client's
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <select
+        style={inputStyle}
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === "__custom__") {
+            setUseCustom(true);
+            onChange("");
+          } else {
+            onChange(e.target.value);
+          }
+        }}
+      >
+        <option value={clientContractTitle}>{clientContractTitle}</option>
+        <option value="__custom__">Custom…</option>
+      </select>
+      <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 3 }}>
+        Auto-filled from client · choose "Custom…" to override
+      </p>
     </div>
   );
 }
@@ -195,10 +271,10 @@ export default function TestimonialsForm() {
   const [tools, setTools]                 = useState(new Set());
 
   // Screenshot uploads
-  const [screenshotFile, setScreenshotFile]         = useState(null);
-  const [screenshotPreview, setScreenshotPreview]   = useState(null);
-  const [rawFile, setRawFile]                       = useState(null);
-  const [rawPreview, setRawPreview]                 = useState(null);
+  const [screenshotFile, setScreenshotFile]       = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
+  const [rawFile, setRawFile]                     = useState(null);
+  const [rawPreview, setRawPreview]               = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState(null);
@@ -213,13 +289,16 @@ export default function TestimonialsForm() {
     setClientsError(null);
     try {
       const res = await fetch(`${BASE_URL}/admin/clients`, {
-        headers: { "x-api-key": API_KEY },
+        method: "GET",
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
       });
-      if (!res.ok) throw new Error("Failed to fetch clients.");
-      const data = await res.json();
-      setClients(data.data ?? []);
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Failed to load clients");
+      setClients(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
-      setClientsError(err.message);
+      setClientsError(err.message || "Something went wrong");
+      setClients([]);
     } finally {
       setClientsLoading(false);
     }
@@ -228,6 +307,15 @@ export default function TestimonialsForm() {
   function handleSelectClient(client) {
     setSelectedClient(client);
     setClientSearch("");
+    // Auto-fill contract title from client data if available
+    if (client.contractTitle) {
+      setContractTitle(client.contractTitle);
+    }
+  }
+
+  function handleClearClient() {
+    setSelectedClient(null);
+    setContractTitle("");
   }
 
   function toggleTool(tool) {
@@ -253,8 +341,8 @@ export default function TestimonialsForm() {
 
   async function handleSubmit() {
     setResult(null);
-    if (!feedback.trim())  return setResult({ type: "error", msg: "Feedback text is required." });
-    if (!selectedClient)   return setResult({ type: "error", msg: "Please select a client." });
+    if (!feedback.trim()) return setResult({ type: "error", msg: "Feedback text is required." });
+    if (!selectedClient)  return setResult({ type: "error", msg: "Please select a client." });
 
     setSubmitting(true);
     try {
@@ -267,13 +355,13 @@ export default function TestimonialsForm() {
       const payload = {
         feedback:  feedback.trim(),
         clientId:  selectedClient.id,
-        ...(contractTitle    && { contractTitle:    contractTitle.trim() }),
-        ...(projectTitle     && { projectTitle:     projectTitle.trim()  }),
-        ...(category         && { category }),
-        ...(credLink         && { credibilityLink:  credLink.trim() }),
-        ...(rating           && { rate: rating }),
-        ...(status           && { status }),
-        ...(tools.size       && { tools: [...tools] }),
+        ...(contractTitle && { contractTitle: contractTitle.trim() }),
+        ...(projectTitle  && { projectTitle:  projectTitle.trim()  }),
+        ...(category      && { category }),
+        ...(credLink      && { credibilityLink: credLink.trim() }),
+        ...(rating        && { rate: rating }),
+        ...(status        && { status }),
+        ...(tools.size    && { tools: [...tools] }),
         ...(screenshotFileId && { screenshotFileId }),
         ...(rawFileId        && { rawFileId }),
       };
@@ -306,11 +394,14 @@ export default function TestimonialsForm() {
     setResult(null);
   }
 
-  const filteredClients = clients.filter((c) =>
-    !clientSearch ||
-    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    c.company?.toLowerCase().includes(clientSearch.toLowerCase())
-  );
+  const filteredClients = clients.filter((c) => {
+    const search = clientSearch.toLowerCase();
+    return (
+      !clientSearch ||
+      c?.name?.toLowerCase()?.includes(search) ||
+      c?.company?.toLowerCase()?.includes(search)
+    );
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: "#f3f4f6", padding: "2rem 1rem", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -380,12 +471,17 @@ export default function TestimonialsForm() {
                           {client.name?.[0]?.toUpperCase() ?? "?"}
                         </div>
                       )}
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <p style={{ margin: 0, fontWeight: 500, fontSize: 14, color: "#111827" }}>{client.name}</p>
                         <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
                           {[client.role, client.company].filter(Boolean).join(" · ")}
                         </p>
                       </div>
+                      {client.contractTitle && (
+                        <span style={{ fontSize: 11, color: "#6b7280", background: "#f3f4f6", padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>
+                          {client.contractTitle}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -398,7 +494,7 @@ export default function TestimonialsForm() {
           ) : (
             <>
               <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>Selected client</p>
-              <ClientCard client={selectedClient} onClear={() => setSelectedClient(null)} />
+              <ClientCard client={selectedClient} onClear={handleClearClient} />
               <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
                 ℹ Profile photo, name, company, and role come from the Client relation — no separate upload needed.
               </p>
@@ -430,7 +526,11 @@ export default function TestimonialsForm() {
           <div style={sectionLabel}>Project details</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Field label="Contract title">
-              <input style={inputStyle} value={contractTitle} onChange={(e) => setContractTitle(e.target.value)} placeholder="e.g. 60 minute consultation" />
+              <ContractTitleField
+                clientContractTitle={selectedClient?.contractTitle ?? ""}
+                value={contractTitle}
+                onChange={setContractTitle}
+              />
             </Field>
             <Field label="Project title">
               <input style={inputStyle} value={projectTitle} onChange={(e) => setProjectTitle(e.target.value)} placeholder="e.g. Notion & Automation Consultation" />
