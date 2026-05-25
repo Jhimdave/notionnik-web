@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { useState } from 'react'
 import { ThemeProvider } from './pages/ThemeContext'
 import Navbar          from './components/Navbar'
@@ -19,49 +19,35 @@ import './App.css'
 import ChatBox from './components/AiAgent'
 import Admin from './admin/admin-side'
 
-// ── Separate component so useLocation works inside <Router> ───────
-function AppLayout() {
-  const [openChat, setOpenChat] = useState(false)
-  const location = useLocation()
-
-  const isAdminPage = location.pathname === '/admin-side'
-
-  return (
-    <ThemeProvider>
-      <PageBackground />
-      <CustomCursor />
-      <div className="min-h-screen flex flex-col">
-
-        {!isAdminPage && <Navbar />}
-
-        <div className="flex-1">
-          <Routes>
-            <Route path="/"                      element={<Dashboard    />} />
-            <Route path="/services"              element={<Services     />} />
-            <Route path="/case-studies"          element={<CaseStudies  />} />
-            <Route path="/case-studies/:id"      element={<CaseStudyDetail />} />
-            <Route path="/testimonials"          element={<Testimonials />} />
-            <Route path="/about"                 element={<AboutUs      />} />
-            <Route path="/book"                  element={<Book         />} />
-            <Route path="/contact"               element={<Contact      />} />
-            <Route path="/admin-side"            element={<Admin        />} />
-          </Routes>
-        </div>
-
-        {!isAdminPage && <Footer />}
-        {!isAdminPage && <PeepingRobot onOpenChat={() => setOpenChat(true)} />}
-        {!isAdminPage && <Chatbot forceOpen={openChat} onOpened={() => setOpenChat(false)} />}
-        {!isAdminPage && <ChatBox forceOpen={openChat} onOpened={() => setOpenChat(false)} />}
-
-      </div>
-    </ThemeProvider>
-  )
-}
-
 export default function App() {
+  const [openChat, setOpenChat] = useState(false)
+
   return (
     <Router>
-      <AppLayout />
+      <ThemeProvider>
+        <PageBackground />
+        <CustomCursor />
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <div className="flex-1">
+            <Routes>
+              <Route path="/"                      element={<Dashboard    />} />
+              <Route path="/services"              element={<Services     />} />
+              <Route path="/case-studies"          element={<CaseStudies  />} />
+              <Route path="/case-studies/:id"      element={<CaseStudyDetail />} />
+              <Route path="/testimonials"          element={<Testimonials />} />
+              <Route path="/about"                 element={<AboutUs      />} />
+              <Route path="/book"                  element={<Book         />} />
+              <Route path="/contact"               element={<Contact      />} />
+              <Route path="/admin-side"            element={<Admin  />} />
+            </Routes>
+          </div>
+          <Footer />
+          <PeepingRobot onOpenChat={() => setOpenChat(true)} />
+          <Chatbot forceOpen={openChat} onOpened={() => setOpenChat(false)} />
+          <ChatBox forceOpen={openChat} onOpened={() => setOpenChat(false)}/>
+        </div>
+      </ThemeProvider>
     </Router>
   )
 }
