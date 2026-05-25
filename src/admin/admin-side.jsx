@@ -28,7 +28,7 @@ const css = `
     font-family: 'Sora', system-ui, sans-serif;
     min-height: 100vh;
     display: flex;
-    background: #0d0f12;
+    background: #051836;
     position: relative;
     overflow: hidden;
   }
@@ -39,8 +39,8 @@ const css = `
     position: absolute;
     inset: 0;
     background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(15, 2, 46, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(64, 7, 219, 0.03) 1px, transparent 1px);
     background-size: 48px 48px;
     pointer-events: none;
   }
@@ -51,7 +51,7 @@ const css = `
     width: 520px;
     height: 520px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(5, 7, 95, 0.12) 0%, transparent 70%);
     top: -160px;
     right: -140px;
     pointer-events: none;
@@ -286,7 +286,7 @@ const css = `
     border: none;
     border-radius: 10px;
     background: #fff;
-    color: #0d0f12;
+    color: #062452;
     font-size: 14px;
     font-weight: 600;
     font-family: 'Sora', sans-serif;
