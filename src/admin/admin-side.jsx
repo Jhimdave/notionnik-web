@@ -393,27 +393,8 @@ export default function AdminLogin() {
       <div className="al-blob"  aria-hidden="true" />
       <div className="al-blob2" aria-hidden="true" />
 
-      {/* ── Left decorative panel (desktop only) ─────────────── */}
-      <aside className="al-panel" aria-hidden="true">
-        <div className="al-panel-logo">
-          <div className="al-panel-icon">⚡</div>
-          <div>
-            <div className="al-panel-brand">NotionNik</div>
-            <div className="al-panel-tag">ADMIN CONSOLE</div>
-          </div>
-        </div>
 
-        <blockquote className="al-panel-quote">
-          "Manage your testimonials,<br />
-          clients & projects —<br />
-          <strong>all in one place.</strong>"
-        </blockquote>
-
-        <p className="al-panel-footer">
-          © {new Date().getFullYear()} NotionNik · restricted access
-        </p>
-      </aside>
-
+      
       {/* ── Right form side ───────────────────────────────────── */}
       <main className="al-form-side">
         <div className="al-card">
