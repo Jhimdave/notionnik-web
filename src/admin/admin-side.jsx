@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const BASE_URL = import.meta.env.VITE_API_URL; // ← change to your server URL
+const BASE_URL = import.meta.env.VITE_API_URL;
+const API_KEY  = "notionnik2026itsolutions";
 
 const CATEGORIES = [
   "Notion x Automation",
@@ -142,7 +143,11 @@ function ClientCard({ client, onClear }) {
       marginTop: 8,
     }}>
       {client.avatar ? (
-        <img src={client.avatar} alt={client.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "1px solid #e5e7eb" }} />
+        <img
+          src={client.avatar}
+          alt={client.name}
+          style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: "1px solid #e5e7eb" }}
+        />
       ) : (
         <div style={{
           width: 40, height: 40, borderRadius: "50%", background: "#dcfce7",
@@ -171,15 +176,13 @@ function ClientCard({ client, onClear }) {
 
 // ── Main Form ─────────────────────────────────────────────────────
 export default function TestimonialsForm() {
-  const [apiKey, setApiKey]     = useState("");
-  const [showKey, setShowKey]   = useState(false);
 
   // Clients pool
-  const [clients, setClients]           = useState([]);
+  const [clients, setClients]               = useState([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [clientsError, setClientsError] = useState(null);
-  const [selectedClient, setSelectedClient] = useState(null); // full client object
-  const [clientSearch, setClientSearch] = useState("");
+  const [clientsError, setClientsError]     = useState(null);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientSearch, setClientSearch]     = useState("");
 
   // Form fields
   const [feedback, setFeedback]           = useState("");
@@ -191,28 +194,26 @@ export default function TestimonialsForm() {
   const [status, setStatus]               = useState("");
   const [tools, setTools]                 = useState(new Set());
 
-  // Screenshot uploads (NOT profile — that comes from the Client relation)
-  const [screenshotFile, setScreenshotFile]     = useState(null);
-  const [screenshotPreview, setScreenshotPreview] = useState(null);
-  const [rawFile, setRawFile]                   = useState(null);
-  const [rawPreview, setRawPreview]             = useState(null);
+  // Screenshot uploads
+  const [screenshotFile, setScreenshotFile]         = useState(null);
+  const [screenshotPreview, setScreenshotPreview]   = useState(null);
+  const [rawFile, setRawFile]                       = useState(null);
+  const [rawPreview, setRawPreview]                 = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult]         = useState(null);
 
-  // ── Fetch clients when API key is entered ─────────────────────
+  // ── Fetch clients on mount ────────────────────────────────────
   useEffect(() => {
-    if (!apiKey.trim()) { setClients([]); return; }
-    const timer = setTimeout(() => fetchClients(), 600);
-    return () => clearTimeout(timer);
-  }, [apiKey]);
+    fetchClients();
+  }, []);
 
   async function fetchClients() {
     setClientsLoading(true);
     setClientsError(null);
     try {
       const res = await fetch(`${BASE_URL}/admin/clients`, {
-        headers: { "x-api-key": apiKey },
+        headers: { "x-api-key": API_KEY },
       });
       if (!res.ok) throw new Error("Failed to fetch clients.");
       const data = await res.json();
@@ -242,7 +243,7 @@ export default function TestimonialsForm() {
     fd.append("image", file);
     const res = await fetch(`${BASE_URL}/admin/upload`, {
       method: "POST",
-      headers: { "x-api-key": apiKey },
+      headers: { "x-api-key": API_KEY },
       body: fd,
     });
     if (!res.ok) throw new Error("File upload failed: " + (await res.text()));
@@ -252,7 +253,6 @@ export default function TestimonialsForm() {
 
   async function handleSubmit() {
     setResult(null);
-    if (!apiKey.trim())    return setResult({ type: "error", msg: "Admin API key is required." });
     if (!feedback.trim())  return setResult({ type: "error", msg: "Feedback text is required." });
     if (!selectedClient)   return setResult({ type: "error", msg: "Please select a client." });
 
@@ -265,22 +265,22 @@ export default function TestimonialsForm() {
       if (rawFile)        rawFileId        = await uploadFile(rawFile);
 
       const payload = {
-        feedback:        feedback.trim(),
-        clientId:        selectedClient.id,           // Notion relation page ID
-        ...(contractTitle && { contractTitle: contractTitle.trim() }),
-        ...(projectTitle  && { projectTitle:  projectTitle.trim()  }),
-        ...(category      && { category }),
-        ...(credLink      && { credibilityLink: credLink.trim() }),
-        ...(rating        && { rate: rating }),
-        ...(status        && { status }),
-        ...(tools.size    && { tools: [...tools] }),
+        feedback:  feedback.trim(),
+        clientId:  selectedClient.id,
+        ...(contractTitle    && { contractTitle:    contractTitle.trim() }),
+        ...(projectTitle     && { projectTitle:     projectTitle.trim()  }),
+        ...(category         && { category }),
+        ...(credLink         && { credibilityLink:  credLink.trim() }),
+        ...(rating           && { rate: rating }),
+        ...(status           && { status }),
+        ...(tools.size       && { tools: [...tools] }),
         ...(screenshotFileId && { screenshotFileId }),
         ...(rawFileId        && { rawFileId }),
       };
 
       const res = await fetch(`${BASE_URL}/admin/testimonials`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": apiKey },
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify(payload),
       });
 
@@ -306,9 +306,9 @@ export default function TestimonialsForm() {
     setResult(null);
   }
 
-  // Filtered client list for search
   const filteredClients = clients.filter((c) =>
-    !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    !clientSearch ||
+    c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
     c.company?.toLowerCase().includes(clientSearch.toLowerCase())
   );
 
@@ -319,22 +319,9 @@ export default function TestimonialsForm() {
         {/* Header */}
         <div style={{ marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid #f3f4f6" }}>
           <h1 style={{ fontSize: 20, fontWeight: 600, color: "#111827", margin: 0 }}>⭐ Add testimonial</h1>
-          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, marginBottom: 0 }}>Submits directly to your Notion Testimonials database</p>
-        </div>
-
-        {/* API Key */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 24 }}>
-          <span>🔑</span>
-          <input
-            type={showKey ? "text" : "password"}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Admin API key  (x-api-key)"
-            style={{ flex: 1, border: "none", background: "transparent", fontSize: 13, color: "#111827", outline: "none", fontFamily: "inherit" }}
-          />
-          <button onClick={() => setShowKey(!showKey)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: "#9ca3af", padding: 0 }}>
-            {showKey ? "🙈" : "👁"}
-          </button>
+          <p style={{ fontSize: 13, color: "#9ca3af", marginTop: 4, marginBottom: 0 }}>
+            Submits directly to your Notion Testimonials database
+          </p>
         </div>
 
         {/* ── CLIENT SELECTION ─────────────────────────────────── */}
@@ -349,22 +336,24 @@ export default function TestimonialsForm() {
                   value={clientSearch}
                   onChange={(e) => setClientSearch(e.target.value)}
                   placeholder="e.g. Jack Andrews, EDGEhomes…"
-                  disabled={!apiKey.trim()}
                 />
               </Field>
 
-              {/* Loading / error states */}
               {clientsLoading && (
                 <p style={{ fontSize: 13, color: "#9ca3af", margin: "6px 0" }}>Loading clients…</p>
               )}
               {clientsError && (
-                <p style={{ fontSize: 13, color: "#dc2626", margin: "6px 0" }}>⚠ {clientsError}</p>
-              )}
-              {!apiKey.trim() && (
-                <p style={{ fontSize: 12, color: "#9ca3af", margin: "6px 0" }}>Enter your API key above to load the client list.</p>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "6px 0" }}>
+                  <p style={{ fontSize: 13, color: "#dc2626", margin: 0 }}>⚠ {clientsError}</p>
+                  <button
+                    onClick={fetchClients}
+                    style={{ fontSize: 12, color: "#3b82f6", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", padding: 0 }}
+                  >
+                    Retry
+                  </button>
+                </div>
               )}
 
-              {/* Client list */}
               {filteredClients.length > 0 && (
                 <div style={{ border: "1px solid #e5e7eb", borderRadius: 10, overflow: "hidden", marginTop: 6, maxHeight: 260, overflowY: "auto" }}>
                   {filteredClients.map((client, idx) => (
@@ -381,7 +370,11 @@ export default function TestimonialsForm() {
                       onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
                     >
                       {client.avatar ? (
-                        <img src={client.avatar} alt={client.name} style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "1px solid #e5e7eb", flexShrink: 0 }} />
+                        <img
+                          src={client.avatar}
+                          alt={client.name}
+                          style={{ width: 36, height: 36, borderRadius: "50%", objectFit: "cover", border: "1px solid #e5e7eb", flexShrink: 0 }}
+                        />
                       ) : (
                         <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, color: "#4338ca", flexShrink: 0 }}>
                           {client.name?.[0]?.toUpperCase() ?? "?"}
@@ -389,11 +382,17 @@ export default function TestimonialsForm() {
                       )}
                       <div>
                         <p style={{ margin: 0, fontWeight: 500, fontSize: 14, color: "#111827" }}>{client.name}</p>
-                        <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>{[client.role, client.company].filter(Boolean).join(" · ")}</p>
+                        <p style={{ margin: 0, fontSize: 12, color: "#9ca3af" }}>
+                          {[client.role, client.company].filter(Boolean).join(" · ")}
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+
+              {!clientsLoading && !clientsError && clients.length === 0 && (
+                <p style={{ fontSize: 12, color: "#9ca3af", margin: "6px 0" }}>No clients found in the pool.</p>
               )}
             </>
           ) : (
@@ -401,7 +400,7 @@ export default function TestimonialsForm() {
               <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>Selected client</p>
               <ClientCard client={selectedClient} onClear={() => setSelectedClient(null)} />
               <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 6 }}>
-                ℹ Client profile photo, name, company, and role come from the Client relation — no separate upload needed.
+                ℹ Profile photo, name, company, and role come from the Client relation — no separate upload needed.
               </p>
             </>
           )}
@@ -420,7 +419,9 @@ export default function TestimonialsForm() {
               maxLength={2000}
               style={{ ...inputStyle, minHeight: 110, resize: "vertical", lineHeight: 1.6 }}
             />
-            <div style={{ fontSize: 11, color: "#9ca3af", textAlign: "right", marginTop: 3 }}>{feedback.length} / 2000</div>
+            <div style={{ fontSize: 11, color: "#9ca3af", textAlign: "right", marginTop: 3 }}>
+              {feedback.length} / 2000
+            </div>
           </Field>
         </div>
 
@@ -504,7 +505,7 @@ export default function TestimonialsForm() {
 
         <div style={divider} />
 
-        {/* ── SCREENSHOTS (not profile — that's from Client relation) ── */}
+        {/* ── SCREENSHOTS ──────────────────────────────────────── */}
         <div style={{ marginBottom: 24 }}>
           <div style={sectionLabel}>Screenshots</div>
           <p style={{ fontSize: 12, color: "#9ca3af", marginBottom: 12, marginTop: -4 }}>
@@ -562,6 +563,7 @@ export default function TestimonialsForm() {
             {submitting ? "⏳ Submitting…" : "🚀 Submit testimonial"}
           </button>
         </div>
+
       </div>
     </div>
   );
