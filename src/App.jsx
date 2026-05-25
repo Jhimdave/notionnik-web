@@ -39,7 +39,7 @@ export default function App() {
               <Route path="/about"                 element={<AboutUs      />} />
               <Route path="/book"                  element={<Book         />} />
               <Route path="/contact"               element={<Contact      />} />
-              <Route path="/admin-side"            element={<Admin  />} />
+              <Route path="/admin/login"            element={<Admin  />} />
             </Routes>
           </div>
           <Footer />
