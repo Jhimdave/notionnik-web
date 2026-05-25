@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const BASE_URL = "http://localhost:3000"; // ← change to your server URL
+const BASE_URL = import.meta.env.VITE_API_URL; // ← change to your server URL
 
 const CATEGORIES = [
   "Notion x Automation",
