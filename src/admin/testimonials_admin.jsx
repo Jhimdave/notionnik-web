@@ -601,7 +601,7 @@ export default function TestimonialsDashboard() {
   const COL_COUNT = 6;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f3f4f6", padding: "2rem 1rem", fontFamily: "system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#000e2b", padding: "2rem 1rem", fontFamily: "system-ui, -apple-system, sans-serif" }}>
 
       {/* ── CREATE MODAL ─────────────────────────────────────── */}
       {showCreate && (
@@ -632,19 +632,19 @@ export default function TestimonialsDashboard() {
       )}
 
       {/* ── TABLE CONTAINER ──────────────────────────────────── */}
-      <div style={{ width: "100%", maxWidth: 1140, margin: "0 auto", background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", padding: "1.75rem", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+      <div style={{ width: "100%", maxWidth: 1140, margin: "0 auto", background: "#011146", borderRadius: 16, border: "1px solid #e5e7eb", padding: "1.75rem", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
 
         {/* Header row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #f3f4f6" }}>
           <div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>📋 Testimonials</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#86a6eb", margin: 0 }}>📋 Testimonials</h2>
             <p style={{ fontSize: 12, color: "#9ca3af", margin: "3px 0 0" }}>
               {testimonials.length} record{testimonials.length !== 1 ? "s" : ""} · synced from Notion
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={fetchTestimonials} disabled={tableLoading}
-              style={{ padding: "7px 14px", fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 8, background: "#f9fafb", color: "#4b5563", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
+              style={{ padding: "7px 14px", fontSize: 12, border: "1px solid #0c1d3f", borderRadius: 8, background: "#002b57", color: "#4b5563", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
               {tableLoading ? "↻ Refreshing…" : "🔄 Refresh"}
             </button>
             <button onClick={() => { setShowCreate(true); setCreateResult(null); }}
@@ -660,10 +660,10 @@ export default function TestimonialsDashboard() {
           </div>
         )}
 
-        <div style={{ overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: 10 }}>
+        <div style={{ overflowX: "auto", border: "1px solid #010a1d", borderRadius: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#374151", textAlign: "left" }}>
             <thead>
-              <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+              <tr style={{ background: "#fafafa", borderBottom: "1px solid #e5e7eb" }}>
                 <th style={{ padding: "11px 16px", fontWeight: 600, color: "#4b5563", width: 190 }}>Client</th>
                 <th style={{ padding: "11px 16px", fontWeight: 600, color: "#4b5563" }}>Project</th>
                 <th style={{ padding: "11px 16px", fontWeight: 600, color: "#4b5563" }}>Feedback</th>
@@ -691,7 +691,7 @@ export default function TestimonialsDashboard() {
                   return [
                     <tr key={item.id || index} style={{
                       borderBottom: "1px solid #f3f4f6",
-                      background: isEditing ? "#f0f9ff" : index % 2 === 0 ? "#fff" : "#fcfdfd",
+                      background: isEditing ? "#f0f9ff" : index % 2 === 0 ? "#ffffff" : "#fcfdfd",
                       transition: "background 0.15s",
                     }}>
                       {/* Client */}

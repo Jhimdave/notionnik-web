@@ -372,7 +372,7 @@ export default function AdminLogin() {
       }
 
       // Persist token if provided
-      if (data.token) localStorage.setItem("admin_token", data.token);
+      localStorage.setItem("admin_token", data.token || "authenticated");
 
       setAlert({ type: "success", msg: "Access granted — redirecting…" });
 
