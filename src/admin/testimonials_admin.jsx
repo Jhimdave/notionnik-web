@@ -292,7 +292,7 @@ function PropertiesModal({ onClose }) {
     try {
       const body = { name: newName.trim(), type: newType };
       if (needsOptions) body.options = options.filter(o => o.name.trim()).map(o => ({ name: o.name.trim(), color: o.color }));
-      const res  = await fetch(`${BASE_URL}/admin/create/new-property`, {
+      const res  = await fetch(`${BASE_URL}/admin/create-testimonial/new-property`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify(body),
@@ -309,7 +309,7 @@ function PropertiesModal({ onClose }) {
   async function handleDelete(name) {
     setDeletingName(name); setDeleteResult(null);
     try {
-      const res  = await fetch(`${BASE_URL}/admin/delete/property`, {
+      const res  = await fetch(`${BASE_URL}/admin/delete-testimonial/property`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify({ name }),
