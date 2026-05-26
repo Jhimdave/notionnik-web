@@ -307,20 +307,34 @@ function PropertiesModal({ onClose }) {
   }
 
   async function handleDelete(name) {
-    setDeletingName(name); setDeleteResult(null);
-    try {
-      const res  = await fetch(`${BASE_URL}/admin/delete-testimonial/property`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-      setDeleteResult({ type: "success", msg: `✓ "${name}" deleted.` });
-      fetchProps();
-    } catch (err) { setDeleteResult({ type: "error", msg: err.message }); }
-    finally { setDeletingName(null); }
+  // 1. Show confirmation dialog before doing anything else
+  const isConfirmed = window.confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`);
+  
+  // 2. If the user clicks "Cancel", exit the function early
+  if (!isConfirmed) return;
+
+  // 3. Proceed with the deletion logic if confirmed
+  setDeletingName(name); 
+  setDeleteResult(null);
+  
+  try {
+    const res = await fetch(`${BASE_URL}/admin/delete-testimonial/property`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+      body: JSON.stringify({ name }),
+    });
+    
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    
+    setDeleteResult({ type: "success", msg: `✓ "${name}" deleted.` });
+    fetchProps();
+  } catch (err) { 
+    setDeleteResult({ type: "error", msg: err.message }); 
+  } finally { 
+    setDeletingName(null); 
   }
+}
 
   const tabBtn = (id, label, icon) => (
     <button onClick={() => setTab(id)} style={{
