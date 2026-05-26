@@ -632,7 +632,7 @@ export default function TestimonialsDashboard() {
       )}
 
       {/* ── TABLE CONTAINER ──────────────────────────────────── */}
-      <div style={{ width: "100%", maxWidth: 1140, margin: "0 auto", background: "#011146", borderRadius: 16, border: "1px solid #e5e7eb", padding: "1.75rem", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
+      <div style={{ width: "100%", maxWidth: 1140, margin: "0 auto", background: "#ebebeb", borderRadius: 16, border: "1px solid #e5e7eb", padding: "1.75rem", boxShadow: "0 1px 6px rgba(0,0,0,0.06)" }}>
 
         {/* Header row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #f3f4f6" }}>
@@ -644,7 +644,7 @@ export default function TestimonialsDashboard() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={fetchTestimonials} disabled={tableLoading}
-              style={{ padding: "7px 14px", fontSize: 12, border: "1px solid #0c1d3f", borderRadius: 8, background: "#002b57", color: "#4b5563", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
+              style={{ padding: "7px 14px", fontSize: 12, border: "1px solid #4b6baa", borderRadius: 8, background: "#798de6", color: "#245dc5", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
               {tableLoading ? "↻ Refreshing…" : "🔄 Refresh"}
             </button>
             <button onClick={() => { setShowCreate(true); setCreateResult(null); }}
@@ -660,7 +660,7 @@ export default function TestimonialsDashboard() {
           </div>
         )}
 
-        <div style={{ overflowX: "auto", border: "1px solid #010a1d", borderRadius: 10 }}>
+        <div style={{ overflowX: "auto", border: "1px solid #b1c5f1", borderRadius: 10 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, color: "#374151", textAlign: "left" }}>
             <thead>
               <tr style={{ background: "#fafafa", borderBottom: "1px solid #e5e7eb" }}>
@@ -722,7 +722,7 @@ export default function TestimonialsDashboard() {
                         {item.tools?.length > 0 && (
                           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
                             {item.tools.map(t => (
-                              <span key={t} style={{ fontSize: 9, background: "#eff6ff", color: "#1d4ed8", padding: "1px 5px", borderRadius: 3 }}>{t}</span>
+                              <span key={t} style={{ fontSize: 9, background: "#eff6ff", color: "#1d0892", padding: "1px 5px", borderRadius: 3 }}>{t}</span>
                             ))}
                           </div>
                         )}
