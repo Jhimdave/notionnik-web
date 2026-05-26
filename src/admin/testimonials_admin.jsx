@@ -16,14 +16,35 @@ const STATUSES = [
   "To Gather Data","Screenshot Editing","Data Gathering",
   "Screenshot Edited","Approved",
 ];
+const PROPERTY_TYPES = [
+  { value: "rich_text",    label: "Text" },
+  { value: "number",       label: "Number" },
+  { value: "select",       label: "Select" },
+  { value: "multi_select", label: "Multi-select" },
+  { value: "date",         label: "Date" },
+  { value: "checkbox",     label: "Checkbox" },
+  { value: "url",          label: "URL" },
+  { value: "email",        label: "Email" },
+  { value: "phone_number", label: "Phone" },
+  { value: "files",        label: "Files" },
+  { value: "people",       label: "People" },
+];
+const NOTION_COLORS = [
+  "default","gray","brown","orange","yellow","green","blue","purple","pink","red",
+];
+const COLOR_DOTS = {
+  default:"#9ca3af", gray:"#6b7280", brown:"#92400e", orange:"#c2410c",
+  yellow:"#b45309",  green:"#16a34a", blue:"#1d4ed8",  purple:"#7c3aed",
+  pink:"#be185d",    red:"#dc2626",
+};
 
 // ── Status helpers ────────────────────────────────────────────────
 const statusColors = {
-  "Approved":          { bg: "#dcfce7", color: "#16a34a" },
-  "Screenshot Edited": { bg: "#fef3c7", color: "#b45309" },
-  "Screenshot Editing":{ bg: "#fff7ed", color: "#c2410c" },
-  "Data Gathering":    { bg: "#eff6ff", color: "#1d4ed8" },
-  "To Gather Data":    { bg: "#f3f4f6", color: "#4b5563" },
+  "Approved":           { bg: "#dcfce7", color: "#16a34a" },
+  "Screenshot Edited":  { bg: "#fef3c7", color: "#b45309" },
+  "Screenshot Editing": { bg: "#fff7ed", color: "#c2410c" },
+  "Data Gathering":     { bg: "#eff6ff", color: "#1d4ed8" },
+  "To Gather Data":     { bg: "#f3f4f6", color: "#4b5563" },
 };
 function statusStyle(s) {
   return statusColors[s] || { bg: "#f3f4f6", color: "#4b5563" };
@@ -110,7 +131,7 @@ function Avatar({ name, src, size = 32 }) {
       </div>;
 }
 
-// ── Client card (shown in form after selecting) ───────────────────
+// ── Client card ───────────────────────────────────────────────────
 function ClientCard({ client, onClear }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 9, marginTop: 6 }}>
@@ -195,16 +216,295 @@ function DeleteModal({ item, onConfirm, onCancel, loading }) {
   );
 }
 
-// ── Create/Edit Form (used inside modal) ──────────────────────────
+// ── Modal shell ───────────────────────────────────────────────────
+function Modal({ title, onClose, children }) {
+  useEffect(() => {
+    const handler = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", overflowY: "auto" }}>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} />
+      <div style={{ position: "relative", background: "#fff", borderRadius: 16, width: "100%", maxWidth: 680, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", zIndex: 1, animation: "modalIn 0.2s ease" }}>
+        <style>{`@keyframes modalIn { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #f3f4f6" }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#111827" }}>{title}</h2>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9ca3af", lineHeight: 1, padding: 4 }}>×</button>
+        </div>
+        <div style={{ padding: "20px 24px 24px", overflowY: "auto", maxHeight: "calc(90vh - 70px)" }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Properties modal ──────────────────────────────────────────────
+function PropertiesModal({ onClose }) {
+  const [tab, setTab]               = useState("add");
+  const [props, setProps]           = useState([]);
+  const [propsLoading, setPropsLoading] = useState(false);
+  const [propsError, setPropsError] = useState(null);
+
+  const [newName, setNewName]       = useState("");
+  const [newType, setNewType]       = useState("rich_text");
+  const [options, setOptions]       = useState([{ name: "", color: "default" }]);
+  const [adding, setAdding]         = useState(false);
+  const [addResult, setAddResult]   = useState(null);
+
+  const [deletingName, setDeletingName] = useState(null);
+  const [deleteResult, setDeleteResult] = useState(null);
+
+  const needsOptions = newType === "select" || newType === "multi_select";
+
+  useEffect(() => {
+    const handler = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  useEffect(() => { fetchProps(); }, []);
+
+  async function fetchProps() {
+    setPropsLoading(true); setPropsError(null);
+    try {
+      const res  = await fetch(`${BASE_URL}/admin/testimonials/db-properties`, {
+        headers: { "x-api-key": API_KEY },
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      setProps(data.data);
+    } catch (err) { setPropsError(err.message); }
+    finally { setPropsLoading(false); }
+  }
+
+  function addOption() { setOptions(prev => [...prev, { name: "", color: "default" }]); }
+  function removeOption(i) { setOptions(prev => prev.filter((_, idx) => idx !== i)); }
+  function updateOption(i, key, val) {
+    setOptions(prev => prev.map((o, idx) => idx === i ? { ...o, [key]: val } : o));
+  }
+
+  async function handleAdd() {
+    if (!newName.trim()) return setAddResult({ type: "error", msg: "Property name is required." });
+    setAdding(true); setAddResult(null);
+    try {
+      const body = { name: newName.trim(), type: newType };
+      if (needsOptions) body.options = options.filter(o => o.name.trim()).map(o => ({ name: o.name.trim(), color: o.color }));
+      const res  = await fetch(`${BASE_URL}/admin/create/new-property`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      setAddResult({ type: "success", msg: `✓ "${newName.trim()}" added!` });
+      setNewName(""); setNewType("rich_text"); setOptions([{ name: "", color: "default" }]);
+      fetchProps();
+    } catch (err) { setAddResult({ type: "error", msg: err.message }); }
+    finally { setAdding(false); }
+  }
+
+  async function handleDelete(name) {
+    setDeletingName(name); setDeleteResult(null);
+    try {
+      const res  = await fetch(`${BASE_URL}/admin/delete/property`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      setDeleteResult({ type: "success", msg: `✓ "${name}" deleted.` });
+      fetchProps();
+    } catch (err) { setDeleteResult({ type: "error", msg: err.message }); }
+    finally { setDeletingName(null); }
+  }
+
+  const tabBtn = (id, label, icon) => (
+    <button onClick={() => setTab(id)} style={{
+      padding: "7px 16px", fontSize: 12, borderRadius: 7, cursor: "pointer",
+      border: "none", fontFamily: "inherit", fontWeight: tab === id ? 600 : 400,
+      background: tab === id ? "#111827" : "#f3f4f6",
+      color: tab === id ? "#fff" : "#6b7280",
+      display: "flex", alignItems: "center", gap: 5,
+    }}>
+      {icon} {label}
+    </button>
+  );
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", overflowY: "auto" }}>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} />
+      <div style={{ position: "relative", background: "#fff", borderRadius: 16, width: "100%", maxWidth: 520, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", zIndex: 1 }}>
+        <style>{`@keyframes modalIn { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 14px", borderBottom: "1px solid #f3f4f6" }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#111827" }}>🗂️ Manage Properties</h2>
+            <p style={{ margin: "3px 0 0", fontSize: 11, color: "#9ca3af" }}>Add or remove columns from your Notion database</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9ca3af", lineHeight: 1, padding: 4 }}>×</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 6, padding: "14px 24px 0" }}>
+          {tabBtn("add",    "Add Property",    "＋")}
+          {tabBtn("remove", "Remove Property", "🗑")}
+        </div>
+
+        <div style={{ padding: "16px 24px 24px" }}>
+
+          {/* ── ADD TAB ───────────────────────────────────── */}
+          {tab === "add" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Field label="Property name" required>
+                <input style={inputStyle} value={newName} onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. Budget, Priority, Notes…" />
+              </Field>
+
+              <Field label="Property type" required>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {PROPERTY_TYPES.map(t => (
+                    <button key={t.value} onClick={() => setNewType(t.value)} style={{
+                      padding: "5px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer",
+                      border: "1px solid", fontFamily: "inherit",
+                      borderColor: newType === t.value ? "#111827" : "#e5e7eb",
+                      background:  newType === t.value ? "#111827" : "#fff",
+                      color:       newType === t.value ? "#fff"    : "#6b7280",
+                      fontWeight:  newType === t.value ? 500       : 400,
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+              </Field>
+
+              {needsOptions && (
+                <div>
+                  <div style={sectionLabel}>Options</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {options.map((opt, i) => (
+                      <div key={i} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <select
+                          value={opt.color}
+                          onChange={e => updateOption(i, "color", e.target.value)}
+                          style={{ ...inputStyle, width: 32, height: 32, padding: 0, textAlign: "center",
+                            background: COLOR_DOTS[opt.color], color: "transparent", cursor: "pointer",
+                            border: "1px solid #e5e7eb", borderRadius: 6,
+                          }}
+                        >
+                          {NOTION_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <input
+                          style={{ ...inputStyle, flex: 1 }}
+                          value={opt.name}
+                          onChange={e => updateOption(i, "name", e.target.value)}
+                          placeholder={`Option ${i + 1}…`}
+                        />
+                        {options.length > 1 && (
+                          <button onClick={() => removeOption(i)}
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 16, padding: "0 4px" }}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button onClick={addOption} style={{
+                      alignSelf: "flex-start", fontSize: 11, color: "#3b82f6", background: "none",
+                      border: "1px dashed #bfdbfe", borderRadius: 6, padding: "4px 10px",
+                      cursor: "pointer", fontFamily: "inherit",
+                    }}>+ Add option</button>
+                  </div>
+                </div>
+              )}
+
+              {addResult && (
+                <div style={{ padding: "8px 12px", borderRadius: 7, fontSize: 12,
+                  background: addResult.type === "success" ? "#f0fdf4" : "#fef2f2",
+                  color:      addResult.type === "success" ? "#15803d" : "#dc2626",
+                  border: `1px solid ${addResult.type === "success" ? "#bbf7d0" : "#fecaca"}` }}>
+                  {addResult.msg}
+                </div>
+              )}
+
+              <button onClick={handleAdd} disabled={adding} style={{
+                padding: "9px 0", fontSize: 13, border: "none", borderRadius: 8,
+                background: adding ? "#9ca3af" : "#111827", color: "#fff",
+                cursor: adding ? "not-allowed" : "pointer", fontWeight: 500,
+                fontFamily: "inherit", display: "flex", alignItems: "center",
+                justifyContent: "center", gap: 6,
+              }}>
+                {adding ? "⏳ Adding…" : "＋ Add property"}
+              </button>
+            </div>
+          )}
+
+          {/* ── REMOVE TAB ────────────────────────────────── */}
+          {tab === "remove" && (
+            <div>
+              {deleteResult && (
+                <div style={{ padding: "8px 12px", borderRadius: 7, fontSize: 12, marginBottom: 12,
+                  background: deleteResult.type === "success" ? "#f0fdf4" : "#fef2f2",
+                  color:      deleteResult.type === "success" ? "#15803d" : "#dc2626",
+                  border: `1px solid ${deleteResult.type === "success" ? "#bbf7d0" : "#fecaca"}` }}>
+                  {deleteResult.msg}
+                </div>
+              )}
+
+              {propsLoading && <p style={{ fontSize: 12, color: "#9ca3af", textAlign: "center", padding: "20px 0" }}>Loading properties…</p>}
+              {propsError   && <p style={{ fontSize: 12, color: "#dc2626" }}>⚠ {propsError}</p>}
+
+              {!propsLoading && props.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 4, maxHeight: 360, overflowY: "auto" }}>
+                  {props.map(p => (
+                    <div key={p.id} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "9px 12px", borderRadius: 8,
+                      border: "1px solid #f3f4f6", background: "#fafafa",
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "#111827" }}>{p.name}</span>
+                        <span style={{ marginLeft: 8, fontSize: 10, color: "#9ca3af",
+                          background: "#f3f4f6", padding: "1px 6px", borderRadius: 4 }}>
+                          {p.type}
+                        </span>
+                      </div>
+                      {p.type === "title" ? (
+                        <span style={{ fontSize: 10, color: "#9ca3af", fontStyle: "italic" }}>protected</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDelete(p.name)}
+                          disabled={deletingName === p.name}
+                          style={{
+                            padding: "4px 10px", fontSize: 11, border: "1px solid #fecaca",
+                            borderRadius: 6, background: "#fff", color: "#dc2626",
+                            cursor: deletingName === p.name ? "not-allowed" : "pointer",
+                            fontFamily: "inherit", opacity: deletingName === p.name ? 0.5 : 1,
+                          }}>
+                          {deletingName === p.name ? "…" : "🗑️ Delete"}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Create/Edit Form ──────────────────────────────────────────────
 function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError, onRetryClients, onSubmit, onCancel, submitting, result }) {
-  const [feedback, setFeedback]           = useState(initial?.feedback      || "");
-  const [contractTitle, setContractTitle] = useState(initial?.contractTitle || "");
-  const [projectTitle, setProjectTitle]   = useState(initial?.projectTitle  || "");
-  const [category, setCategory]           = useState(initial?.category      || "");
+  const [feedback, setFeedback]           = useState(initial?.feedback       || "");
+  const [contractTitle, setContractTitle] = useState(initial?.contractTitle  || "");
+  const [projectTitle, setProjectTitle]   = useState(initial?.projectTitle   || "");
+  const [category, setCategory]           = useState(initial?.category       || "");
   const [credLink, setCredLink]           = useState(initial?.credibilityLink || "");
-  const [rating, setRating]               = useState(initial?.rate          || 0);
-  const [status, setStatus]               = useState(initial?.status        || "");
-  const [tools, setTools]                 = useState(new Set(initial?.tools || []));
+  const [rating, setRating]               = useState(initial?.rate           || 0);
+  const [status, setStatus]               = useState(initial?.status         || "");
+  const [tools, setTools]                 = useState(new Set(initial?.tools  || []));
   const [selectedClient, setSelectedClient] = useState(null);
   const [clientSearch, setClientSearch]   = useState("");
   const [screenshotFile, setScreenshotFile]       = useState(null);
@@ -224,11 +524,7 @@ function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError,
   }
 
   function handleSubmit() {
-    onSubmit({
-      feedback, contractTitle, projectTitle, category,
-      credLink, rating, status, tools,
-      selectedClient, screenshotFile, rawFile,
-    });
+    onSubmit({ feedback, contractTitle, projectTitle, category, credLink, rating, status, tools, selectedClient, screenshotFile, rawFile });
   }
 
   return (
@@ -252,7 +548,8 @@ function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError,
               {filteredClients.length > 0 && (
                 <div style={{ border: "1px solid #e5e7eb", borderRadius: 9, overflow: "hidden", marginTop: 4, maxHeight: 220, overflowY: "auto" }}>
                   {filteredClients.map((client, idx) => (
-                    <div key={client.id} onClick={() => { setSelectedClient(client); setClientSearch(""); if (client.contractTitle) setContractTitle(client.contractTitle); }}
+                    <div key={client.id}
+                      onClick={() => { setSelectedClient(client); setClientSearch(""); if (client.contractTitle) setContractTitle(client.contractTitle); }}
                       style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", cursor: "pointer", borderTop: idx > 0 ? "1px solid #f3f4f6" : "none", background: "#fff", transition: "background 0.1s" }}
                       onMouseEnter={e => e.currentTarget.style.background = "#f9fafb"}
                       onMouseLeave={e => e.currentTarget.style.background = "#fff"}
@@ -349,7 +646,7 @@ function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError,
       {result && (
         <div style={{ padding: "10px 12px", borderRadius: 7, marginBottom: 12, fontSize: 12,
           background: result.type === "success" ? "#f0fdf4" : "#fef2f2",
-          color: result.type === "success" ? "#15803d" : "#dc2626",
+          color:      result.type === "success" ? "#15803d" : "#dc2626",
           border: `1px solid ${result.type === "success" ? "#bbf7d0" : "#fecaca"}` }}>
           {result.msg}
         </div>
@@ -373,41 +670,16 @@ function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError,
   );
 }
 
-// ── Modal shell ───────────────────────────────────────────────────
-function Modal({ title, onClose, children }) {
-  useEffect(() => {
-    const handler = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", overflowY: "auto" }}>
-      <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(3px)" }} />
-      <div style={{ position: "relative", background: "#fff", borderRadius: 16, width: "100%", maxWidth: 680, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", zIndex: 1, animation: "modalIn 0.2s ease" }}>
-        <style>{`@keyframes modalIn { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 16px", borderBottom: "1px solid #f3f4f6" }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#111827" }}>{title}</h2>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "#9ca3af", lineHeight: 1, padding: 4 }}>×</button>
-        </div>
-        <div style={{ padding: "20px 24px 24px", overflowY: "auto", maxHeight: "calc(90vh - 70px)" }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Inline edit row ───────────────────────────────────────────────
 function InlineEditRow({ item, colCount, onSave, onCancel, submitting, result }) {
-  const [feedback, setFeedback]           = useState(item.feedback      || "");
-  const [contractTitle, setContractTitle] = useState(item.contractTitle || "");
-  const [projectTitle, setProjectTitle]   = useState(item.projectTitle  || "");
-  const [category, setCategory]           = useState(item.category      || "");
+  const [feedback, setFeedback]           = useState(item.feedback       || "");
+  const [contractTitle, setContractTitle] = useState(item.contractTitle  || "");
+  const [projectTitle, setProjectTitle]   = useState(item.projectTitle   || "");
+  const [category, setCategory]           = useState(item.category       || "");
   const [credLink, setCredLink]           = useState(item.credibilityLink || "");
-  const [rating, setRating]               = useState(item.rate          || 0);
-  const [status, setStatus]               = useState(item.status        || "");
-  const [tools, setTools]                 = useState(new Set(item.tools || []));
+  const [rating, setRating]               = useState(item.rate           || 0);
+  const [status, setStatus]               = useState(item.status         || "");
+  const [tools, setTools]                 = useState(new Set(item.tools  || []));
 
   function toggleTool(t) {
     setTools(prev => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; });
@@ -454,7 +726,7 @@ function InlineEditRow({ item, colCount, onSave, onCancel, submitting, result })
         {result && (
           <div style={{ padding: "8px 10px", borderRadius: 6, marginBottom: 10, fontSize: 12,
             background: result.type === "success" ? "#f0fdf4" : "#fef2f2",
-            color: result.type === "success" ? "#15803d" : "#dc2626",
+            color:      result.type === "success" ? "#15803d" : "#dc2626",
             border: `1px solid ${result.type === "success" ? "#bbf7d0" : "#fecaca"}` }}>
             {result.msg}
           </div>
@@ -483,26 +755,27 @@ export default function TestimonialsDashboard() {
   const [tableLoading, setTableLoading]     = useState(false);
   const [tableError, setTableError]         = useState(null);
 
-  // Modal state
-  const [showCreate, setShowCreate]   = useState(false);
-  const [createResult, setCreateResult] = useState(null);
-  const [submitting, setSubmitting]   = useState(false);
+  // Modals
+  const [showCreate, setShowCreate]         = useState(false);
+  const [createResult, setCreateResult]     = useState(null);
+  const [submitting, setSubmitting]         = useState(false);
+  const [showProperties, setShowProperties] = useState(false);
 
   // Inline edit
-  const [editingId, setEditingId]     = useState(null);
-  const [editResult, setEditResult]   = useState(null);
+  const [editingId, setEditingId]           = useState(null);
+  const [editResult, setEditResult]         = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Delete
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget]     = useState(null);
+  const [deleteLoading, setDeleteLoading]   = useState(false);
 
   useEffect(() => { fetchClients(); fetchTestimonials(); }, []);
 
   async function fetchClients() {
     setClientsLoading(true); setClientsError(null);
     try {
-      const res = await fetch(`${BASE_URL}/admin/clients`, { headers: { "Content-Type": "application/json", "x-api-key": API_KEY } });
+      const res  = await fetch(`${BASE_URL}/admin/clients`, { headers: { "Content-Type": "application/json", "x-api-key": API_KEY } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Failed to load clients");
@@ -514,7 +787,7 @@ export default function TestimonialsDashboard() {
   async function fetchTestimonials() {
     setTableLoading(true); setTableError(null);
     try {
-      const res = await fetch(`${BASE_URL}/api/testimonials`, { headers: { "Content-Type": "application/json", "x-api-key": API_KEY_GET } });
+      const res  = await fetch(`${BASE_URL}/api/testimonials`, { headers: { "Content-Type": "application/json", "x-api-key": API_KEY_GET } });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setTestimonials(Array.isArray(json) ? json : json.data || []);
@@ -541,15 +814,15 @@ export default function TestimonialsDashboard() {
       if (rawFile)        rawFileId        = await uploadFile(rawFile);
       const payload = {
         feedback: feedback.trim(), clientId: selectedClient.id,
-        ...(contractTitle && { contractTitle: contractTitle.trim() }),
-        ...(projectTitle  && { projectTitle:  projectTitle.trim()  }),
-        ...(category      && { category }),
-        ...(credLink      && { credibilityLink: credLink.trim() }),
-        ...(rating        && { rate: rating }),
-        ...(status        && { status }),
-        ...(tools.size    && { tools: [...tools] }),
-        ...(screenshotFileId && { screenshotFileId }),
-        ...(rawFileId        && { rawFileId }),
+        ...(contractTitle    && { contractTitle:    contractTitle.trim()    }),
+        ...(projectTitle     && { projectTitle:     projectTitle.trim()     }),
+        ...(category         && { category                                  }),
+        ...(credLink         && { credibilityLink:  credLink.trim()         }),
+        ...(rating           && { rate:             rating                  }),
+        ...(status           && { status                                    }),
+        ...(tools.size       && { tools:            [...tools]              }),
+        ...(screenshotFileId && { screenshotFileId                          }),
+        ...(rawFileId        && { rawFileId                                 }),
       };
       const res  = await fetch(`${BASE_URL}/admin/testimonials`, { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": API_KEY }, body: JSON.stringify(payload) });
       const data = await res.json();
@@ -569,10 +842,10 @@ export default function TestimonialsDashboard() {
         feedback: feedback.trim(),
         ...(contractTitle && { contractTitle: contractTitle.trim() }),
         ...(projectTitle  && { projectTitle:  projectTitle.trim()  }),
-        ...(category      && { category }),
-        ...(credLink      && { credibilityLink: credLink.trim() }),
+        ...(category      && { category                            }),
+        ...(credLink      && { credibilityLink: credLink.trim()    }),
         rate: rating || 0,
-        ...(status        && { status }),
+        ...(status        && { status                              }),
         tools: [...tools],
       };
       const res  = await fetch(`${BASE_URL}/admin/testimonials/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-api-key": API_KEY }, body: JSON.stringify(payload) });
@@ -621,6 +894,9 @@ export default function TestimonialsDashboard() {
         </Modal>
       )}
 
+      {/* ── PROPERTIES MODAL ─────────────────────────────────── */}
+      {showProperties && <PropertiesModal onClose={() => setShowProperties(false)} />}
+
       {/* ── DELETE MODAL ─────────────────────────────────────── */}
       {deleteTarget && (
         <DeleteModal
@@ -643,6 +919,12 @@ export default function TestimonialsDashboard() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setShowProperties(true)}
+              title="Manage DB properties"
+              style={{ padding: "7px 12px", fontSize: 12, border: "1px solid #e5e7eb", borderRadius: 8, background: "#f9fafb", color: "#4b5563", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+              🗂️ Properties
+            </button>
             <button onClick={fetchTestimonials} disabled={tableLoading}
               style={{ padding: "7px 14px", fontSize: 12, border: "1px solid #4b6baa", borderRadius: 8, background: "#798de6", color: "#245dc5", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: "inherit" }}>
               {tableLoading ? "↻ Refreshing…" : "🔄 Refresh"}
@@ -679,12 +961,12 @@ export default function TestimonialsDashboard() {
                 <tr><td colSpan={COL_COUNT} style={{ padding: 32, textAlign: "center", color: "#9ca3af" }}>No testimonials yet. Click <strong>+ Create</strong> to add one.</td></tr>
               ) : (
                 testimonials.map((item, index) => {
-                  const cName    = item.displayName || "Unknown Client";
-                  const cCompany = item.company     || "";
-                  const cAvatar  = item.image       || null;
-                  const pTitle   = item.projectTitle  || "—";
-                  const pContract= item.contractTitle || "";
-                  const fText    = item.feedback      || "";
+                  const cName     = item.displayName   || "Unknown Client";
+                  const cCompany  = item.company       || "";
+                  const cAvatar   = item.image         || null;
+                  const pTitle    = item.projectTitle  || "—";
+                  const pContract = item.contractTitle || "";
+                  const fText     = item.feedback      || "";
                   const isEditing = editingId === item.id;
                   const ss = statusStyle(item.status);
 
@@ -760,7 +1042,6 @@ export default function TestimonialsDashboard() {
                       </td>
                     </tr>,
 
-                    /* Inline edit row — only for the item being edited */
                     isEditing && (
                       <InlineEditRow
                         key={`edit-${item.id}`}
