@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVICES_DATA } from '../data'
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = "https://notionnik-backend-production.up.railway.app" || import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_SECRET;
 
 /* ── Cache config ──────────────────────────────────────────────────
