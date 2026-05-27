@@ -4,7 +4,7 @@ const BASE_URL    = import.meta.env.VITE_API_URL;
 const API_KEY     = import.meta.env.VITE_API_CLIENT_KEY;
 const API_KEY_GET = import.meta.env.VITE_API_SECRET;
 
-// ── Theme tokens ──────────────────────────────────────────────────
+// ── Theme tokens ──────────────────────────────────────────────────────────────
 const T = {
   navy:        "#000e2b",
   navyCard:    "#071a3e",
@@ -54,7 +54,7 @@ const COLOR_DOTS = {
   pink:"#be185d",    red:"#dc2626",
 };
 
-// ── Status ────────────────────────────────────────────────────────
+// ── Status styles ─────────────────────────────────────────────────────────────
 const STATUS_COLORS = {
   "Approved":           { bg: "rgba(34,197,94,0.12)",  border: "rgba(34,197,94,0.3)",   color: "#4ade80" },
   "Screenshot Edited":  { bg: "rgba(234,179,8,0.1)",   border: "rgba(234,179,8,0.3)",   color: "#facc15" },
@@ -66,7 +66,20 @@ function statusStyle(s) {
   return STATUS_COLORS[s] || { bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.3)", color: "#94a3b8" };
 }
 
-// ── Shared style tokens ───────────────────────────────────────────
+// ── Category styles ───────────────────────────────────────────────────────────
+const CATEGORY_COLORS = {
+  "Notion x Automation": { bg: "rgba(234,179,8,0.1)",   border: "rgba(234,179,8,0.3)",   color: "#facc15" },
+  "Notion Setup":        { bg: "rgba(168,85,247,0.1)",  border: "rgba(168,85,247,0.3)",  color: "#c084fc" },
+  "Automation":          { bg: "rgba(234,179,8,0.1)",   border: "rgba(234,179,8,0.3)",   color: "#facc15" },
+  "Website Development": { bg: "rgba(34,197,94,0.1)",   border: "rgba(34,197,94,0.3)",   color: "#4ade80" },
+  "Google App Script":   { bg: "rgba(239,68,68,0.1)",   border: "rgba(239,68,68,0.3)",   color: "#f87171" },
+  "Consultation":        { bg: "rgba(59,130,246,0.1)",  border: "rgba(59,130,246,0.3)",  color: "#7eb3fa" },
+};
+function categoryStyle(c) {
+  return CATEGORY_COLORS[c] || { bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.3)", color: "#94a3b8" };
+}
+
+// ── Shared style tokens ───────────────────────────────────────────────────────
 const inputStyle = {
   width: "100%", fontSize: 13, padding: "7px 10px",
   border: `1px solid ${T.borderStrong}`, borderRadius: 7,
@@ -79,7 +92,66 @@ const sectionLabel = {
 };
 const divider = { height: 1, background: T.border, margin: "18px 0" };
 
-// ── Field ─────────────────────────────────────────────────────────
+// ── Helper: resolve reviewer role from various possible API shapes ─────────────
+// The formula "Client.map(current.Role).first()" may come back under different keys
+function resolveRole(item) {
+  return (
+    item.reviewerRole     ||  // most likely mapped key
+    item.role             ||  // some APIs flatten it here
+    item["Reviewer Role"] ||  // raw Notion property name
+    item.clientRole       ||
+    item.client_role      ||
+    ""
+  );
+}
+
+// ── Helper: resolve client avatar/profile image ONLY — never screenshots ──────
+// Strictly pulls from avatar/profile fields; screenshot fields are intentionally excluded.
+function resolveImageUrl(item) {
+  const candidates = [
+    item.image,
+    item.avatar,
+    item.clientImage,
+    item.client_image,
+    item.profileImage,
+    item.profile_image,
+    item.photo,
+    item.clientAvatar,
+    item.client_avatar,
+  ];
+  for (const c of candidates) {
+    if (!c) continue;
+    if (typeof c === "string" && c.startsWith("http")) return c;
+    if (Array.isArray(c) && c[0]) {
+      const first = c[0];
+      if (typeof first === "string") return first;
+      if (first?.url) return first.url;
+      if (first?.file?.url) return first.file.url;
+      if (first?.external?.url) return first.external.url;
+    }
+    if (c?.url) return c.url;
+    if (c?.file?.url) return c.file.url;
+  }
+  return null;
+}
+
+// ── Helper: resolve screenshot URLs specifically ──────────────────────────────
+function resolveScreenshot(val) {
+  if (!val) return null;
+  if (typeof val === "string" && val.startsWith("http")) return val;
+  if (Array.isArray(val) && val.length > 0) {
+    const first = val[0];
+    if (typeof first === "string") return first;
+    if (first?.url) return first.url;
+    if (first?.file?.url) return first.file.url;
+    if (first?.external?.url) return first.external.url;
+  }
+  if (val?.url) return val.url;
+  if (val?.file?.url) return val.file.url;
+  return null;
+}
+
+// ── Field ─────────────────────────────────────────────────────────────────────
 function Field({ label, required, children, hint }) {
   return (
     <div style={{ marginBottom: 12 }}>
@@ -92,7 +164,7 @@ function Field({ label, required, children, hint }) {
   );
 }
 
-// ── StarRating ────────────────────────────────────────────────────
+// ── StarRating ────────────────────────────────────────────────────────────────
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
   return (
@@ -103,7 +175,7 @@ function StarRating({ value, onChange }) {
           onMouseEnter={() => onChange && setHovered(n)}
           onMouseLeave={() => onChange && setHovered(0)}
           style={{
-            fontSize: onChange ? 26 : 14, cursor: onChange ? "pointer" : "default",
+            fontSize: onChange ? 26 : 13, cursor: onChange ? "pointer" : "default",
             color: n <= (hovered || value) ? "#f59e0b" : "#1e3a6e",
             transition: "color 0.1s", userSelect: "none",
           }}
@@ -116,9 +188,20 @@ function StarRating({ value, onChange }) {
   );
 }
 
-// ── UploadZone ────────────────────────────────────────────────────
+// ── UploadZone ────────────────────────────────────────────────────────────────
 function UploadZone({ label, hint, emoji, preview, onChange }) {
   const ref = useRef();
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large. Maximum size is 5MB.");
+      ref.current.value = ""; // reset input
+      return;
+    }
+    onChange(file);
+  }
+
   return (
     <div>
       <div onClick={() => ref.current.click()} style={{
@@ -130,10 +213,12 @@ function UploadZone({ label, hint, emoji, preview, onChange }) {
         onMouseLeave={e => e.currentTarget.style.borderColor = T.borderStrong}
       >
         <input ref={ref} type="file" accept="image/jpg,image/jpeg,image/png,image/webp"
-          style={{ display: "none" }} onChange={e => onChange(e.target.files[0])} />
+          style={{ display: "none" }} onChange={e => handleFile(e.target.files[0])} />
         <div style={{ fontSize: 20, marginBottom: 4 }}>{emoji}</div>
         <p style={{ fontSize: 12, color: T.textPrimary, fontWeight: 500, margin: 0 }}>{label}</p>
         <p style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>{hint}</p>
+        {/* ← size limit badge */}
+        <p style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>Max 5MB</p>
       </div>
       {preview && <img src={preview} alt="preview"
         style={{ width: "100%", height: 70, objectFit: "cover", borderRadius: 7, marginTop: 6, border: `1px solid ${T.borderStrong}` }} />}
@@ -141,7 +226,7 @@ function UploadZone({ label, hint, emoji, preview, onChange }) {
   );
 }
 
-// ── Avatar ────────────────────────────────────────────────────────
+// ── Avatar ────────────────────────────────────────────────────────────────────
 function Avatar({ name, src, size = 32 }) {
   return src
     ? <img src={src} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.borderStrong}`, flexShrink: 0 }} />
@@ -150,7 +235,7 @@ function Avatar({ name, src, size = 32 }) {
       </div>;
 }
 
-// ── ClientCard ────────────────────────────────────────────────────
+// ── ClientCard ────────────────────────────────────────────────────────────────
 function ClientCard({ client, onClear }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 9, marginTop: 6 }}>
@@ -164,7 +249,7 @@ function ClientCard({ client, onClear }) {
   );
 }
 
-// ── ContractTitleField ────────────────────────────────────────────
+// ── ContractTitleField ────────────────────────────────────────────────────────
 function ContractTitleField({ clientContractTitle, value, onChange }) {
   const [useCustom, setUseCustom] = useState(false);
   useEffect(() => setUseCustom(false), [clientContractTitle]);
@@ -190,7 +275,7 @@ function ContractTitleField({ clientContractTitle, value, onChange }) {
   );
 }
 
-// ── PillToggle ────────────────────────────────────────────────────
+// ── PillToggle ────────────────────────────────────────────────────────────────
 function PillToggle({ options, selected, onToggle, activeColor = T.blue, activeBg = T.blueDim }) {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -211,7 +296,7 @@ function PillToggle({ options, selected, onToggle, activeColor = T.blue, activeB
   );
 }
 
-// ── DeleteModal ───────────────────────────────────────────────────
+// ── DeleteModal ───────────────────────────────────────────────────────────────
 function DeleteModal({ item, onConfirm, onCancel, loading }) {
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -235,7 +320,7 @@ function DeleteModal({ item, onConfirm, onCancel, loading }) {
   );
 }
 
-// ── Modal ─────────────────────────────────────────────────────────
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children }) {
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
@@ -260,7 +345,7 @@ function Modal({ title, onClose, children }) {
   );
 }
 
-// ── PropertiesModal ───────────────────────────────────────────────
+// ── PropertiesModal ───────────────────────────────────────────────────────────
 function PropertiesModal({ onClose }) {
   const [tab, setTab]                   = useState("add");
   const [props, setProps]               = useState([]);
@@ -349,7 +434,6 @@ function PropertiesModal({ onClose }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px", overflowY: "auto" }}>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,7,20,0.85)", backdropFilter: "blur(3px)" }} />
       <div style={{ position: "relative", background: T.navyCard, border: `1px solid ${T.borderStrong}`, borderRadius: 16, width: "100%", maxWidth: 520, zIndex: 1 }}>
-
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px 14px", borderBottom: `1px solid ${T.border}`, background: T.navyDeep, borderRadius: "16px 16px 0 0" }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: T.textPrimary }}>🗂️ Manage Properties</h2>
@@ -357,12 +441,10 @@ function PropertiesModal({ onClose }) {
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: T.textMuted, lineHeight: 1, padding: 4 }}>×</button>
         </div>
-
         <div style={{ display: "flex", gap: 6, padding: "14px 24px 0" }}>
           {tabBtn("add", "Add Property", "＋")}
           {tabBtn("remove", "Remove Property", "🗑")}
         </div>
-
         <div style={{ padding: "16px 24px 24px" }}>
           {tab === "add" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -375,9 +457,9 @@ function PropertiesModal({ onClose }) {
                     <button key={t.value} onClick={() => setNewType(t.value)} style={{
                       padding: "5px 12px", borderRadius: 20, fontSize: 12, cursor: "pointer",
                       border: "1px solid", fontFamily: "inherit",
-                      borderColor: newType === t.value ? T.blue      : T.borderStrong,
-                      background:  newType === t.value ? T.blueDim   : "transparent",
-                      color:       newType === t.value ? T.blue      : T.textSecond,
+                      borderColor: newType === t.value ? T.blue    : T.borderStrong,
+                      background:  newType === t.value ? T.blueDim : "transparent",
+                      color:       newType === t.value ? T.blue    : T.textSecond,
                       fontWeight:  newType === t.value ? 500 : 400,
                     }}>{t.label}</button>
                   ))}
@@ -409,7 +491,6 @@ function PropertiesModal({ onClose }) {
               </button>
             </div>
           )}
-
           {tab === "remove" && (
             <div>
               {alert(deleteResult)}
@@ -443,16 +524,16 @@ function PropertiesModal({ onClose }) {
   );
 }
 
-// ── TestimonialForm ───────────────────────────────────────────────
+// ── TestimonialForm ───────────────────────────────────────────────────────────
 function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError, onRetryClients, onSubmit, onCancel, submitting, result }) {
-  const [feedback, setFeedback]                   = useState(initial?.feedback       || "");
-  const [contractTitle, setContractTitle]         = useState(initial?.contractTitle  || "");
-  const [projectTitle, setProjectTitle]           = useState(initial?.projectTitle   || "");
-  const [category, setCategory]                   = useState(initial?.category       || "");
-  const [credLink, setCredLink]                   = useState(initial?.credibilityLink|| "");
-  const [rating, setRating]                       = useState(initial?.rate           || 0);
-  const [status, setStatus]                       = useState(initial?.status         || "");
-  const [tools, setTools]                         = useState(new Set(initial?.tools  || []));
+  const [feedback, setFeedback]                   = useState(initial?.feedback        || "");
+  const [contractTitle, setContractTitle]         = useState(initial?.contractTitle   || "");
+  const [projectTitle, setProjectTitle]           = useState(initial?.projectTitle    || "");
+  const [category, setCategory]                   = useState(initial?.category        || "");
+  const [credLink, setCredLink]                   = useState(initial?.credibilityLink || "");
+  const [rating, setRating]                       = useState(initial?.rate            || 0);
+  const [status, setStatus]                       = useState(initial?.status          || "");
+  const [tools, setTools]                         = useState(new Set(initial?.tools   || []));
   const [selectedClient, setSelectedClient]       = useState(null);
   const [clientSearch, setClientSearch]           = useState("");
   const [screenshotFile, setScreenshotFile]       = useState(null);
@@ -597,16 +678,16 @@ function TestimonialForm({ mode, initial, clients, clientsLoading, clientsError,
   );
 }
 
-// ── InlineEditRow ─────────────────────────────────────────────────
+// ── InlineEditRow ─────────────────────────────────────────────────────────────
 function InlineEditRow({ item, colCount, onSave, onCancel, submitting, result }) {
-  const [feedback, setFeedback]           = useState(item.feedback       || "");
-  const [contractTitle, setContractTitle] = useState(item.contractTitle  || "");
-  const [projectTitle, setProjectTitle]   = useState(item.projectTitle   || "");
-  const [category, setCategory]           = useState(item.category       || "");
-  const [credLink, setCredLink]           = useState(item.credibilityLink|| "");
-  const [rating, setRating]               = useState(item.rate           || 0);
-  const [status, setStatus]               = useState(item.status         || "");
-  const [tools, setTools]                 = useState(new Set(item.tools  || []));
+  const [feedback, setFeedback]           = useState(item.feedback        || "");
+  const [contractTitle, setContractTitle] = useState(item.contractTitle   || "");
+  const [projectTitle, setProjectTitle]   = useState(item.projectTitle    || "");
+  const [category, setCategory]           = useState(item.category        || "");
+  const [credLink, setCredLink]           = useState(item.credibilityLink || "");
+  const [rating, setRating]               = useState(item.rate            || 0);
+  const [status, setStatus]               = useState(item.status          || "");
+  const [tools, setTools]                 = useState(new Set(item.tools   || []));
 
   function toggleTool(t) { setTools(prev => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; }); }
 
@@ -665,83 +746,378 @@ function InlineEditRow({ item, colCount, onSave, onCancel, submitting, result })
   );
 }
 
-// ── ViewModal (click row) ─────────────────────────────────────────
-function ViewModal({ item, onClose }) {
+// ── ViewModal — now with Edit & Delete actions + fixed images & role ───────────
+function ViewModal({ item, onClose, onEdit, onDelete, onSave, editSubmitting, editResult }) {
+  const [isEditing, setIsEditing] = useState(false);
+
   useEffect(() => {
     const h = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  const ss = statusStyle(item.status);
+  const ss           = statusStyle(item.status);
+  const cs           = categoryStyle(item.category);
+  const role         = resolveRole(item);
+  // Screenshots — strictly from screenshot/file upload fields only
+  // ✅ NEW
+const ssUrl  = resolveScreenshot(item.feedbackScreenshot);
+const rawUrl = resolveScreenshot(item.rawScreenshot);
+  // Client avatar — strictly from profile/avatar fields, never screenshots
+  const clientAvatar = resolveImageUrl(item);
+
+  // ── Edit form state ───────────────────────────────────────────────────────
+  const [feedback, setFeedback]           = useState(item.feedback        || "");
+  const [contractTitle, setContractTitle] = useState(item.contractTitle   || "");
+  const [projectTitle, setProjectTitle]   = useState(item.projectTitle    || "");
+  const [category, setCategory]           = useState(item.category        || "");
+  const [credLink, setCredLink]           = useState(item.credibilityLink || "");
+  const [rating, setRating]               = useState(item.rate            || 0);
+  const [status, setStatus]               = useState(item.status          || "");
+  const [tools, setTools]                 = useState(new Set(item.tools   || []));
+  const [screenshotFile, setScreenshotFile]       = useState(null);
+  const [screenshotPreview, setScreenshotPreview] = useState(null);
+  const [rawFile, setRawFile]                     = useState(null);
+  const [rawPreview, setRawPreview]               = useState(null);
+  const [deleteFeedbackSs, setDeleteFeedbackSs]   = useState(false);
+  const [deleteRawSs, setDeleteRawSs]             = useState(false);
+  function toggleTool(t) { setTools(prev => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; }); }
+
+  function handleSave() {
+  onSave(item.id, {
+    feedback, contractTitle, projectTitle, category,
+    credLink, rating, status, tools,
+    screenshotFile, rawFile,         // ← NEW
+    deleteFeedbackSs, deleteRawSs,   // ← NEW
+  });
+}
+
   return (
     <div style={{ position: "fixed", inset: 0, zIndex: 150, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px 16px" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(0,7,20,0.85)", backdropFilter: "blur(3px)" }} />
-      <div style={{ position: "relative", background: T.navyCard, border: `1px solid ${T.borderStrong}`, borderRadius: 16, width: "100%", maxWidth: 540, zIndex: 1, animation: "modalIn 0.2s ease", maxHeight: "90vh", overflowY: "auto" }}>
+      <div style={{ position: "relative", background: T.navyCard, border: `1px solid ${T.borderStrong}`, borderRadius: 16, width: "100%", maxWidth: 580, zIndex: 1, animation: "modalIn 0.2s ease", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <style>{`@keyframes modalIn { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${T.border}`, background: T.navyDeep, borderRadius: "16px 16px 0 0", position: "sticky", top: 0, zIndex: 1 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.textPrimary }}>{item.displayName} — Testimonial</h3>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: T.textMuted, lineHeight: 1 }}>×</button>
+        {/* ── Sticky header ── */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.navyDeep, borderRadius: "16px 16px 0 0", flexShrink: 0 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.textPrimary }}>
+            {item.displayName} — Testimonial
+          </h3>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {!isEditing && (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  style={{ padding: "5px 12px", fontSize: 11, border: `1px solid ${T.borderStrong}`, borderRadius: 7, background: T.blueDim, color: T.blue, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={() => { onClose(); onDelete(item); }}
+                  style={{ padding: "5px 12px", fontSize: 11, border: "1px solid rgba(239,68,68,0.35)", borderRadius: 7, background: "rgba(239,68,68,0.08)", color: "#f87171", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}>
+                  🗑️ Delete
+                </button>
+              </>
+            )}
+            {isEditing && (
+              <button
+                onClick={() => setIsEditing(false)}
+                style={{ padding: "5px 12px", fontSize: 11, border: `1px solid ${T.borderStrong}`, borderRadius: 7, background: "transparent", color: T.textSecond, cursor: "pointer", fontFamily: "inherit" }}>
+                ← Back
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: T.textMuted, lineHeight: 1, marginLeft: 2 }}>×</button>
+          </div>
         </div>
 
-        <div style={{ padding: "18px 20px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Client row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: T.blueDim, borderRadius: 9, border: `1px solid ${T.border}` }}>
-            <Avatar name={item.displayName} src={item.image} size={42} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: T.textPrimary }}>{item.displayName}</div>
-              <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>{item.company || "—"}</div>
-            </div>
-            <StarRating value={item.rate || 0} />
-          </div>
+        {/* ── Scrollable body ── */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "18px 20px 22px" }}>
 
-          {/* Feedback */}
-          <div>
-            <div style={sectionLabel}>Feedback</div>
-            <div style={{ fontSize: 13, color: T.textSecond, lineHeight: 1.7, background: "rgba(0,7,20,0.4)", borderRadius: 8, padding: "12px 14px", border: `1px solid ${T.border}` }}>
-              {item.feedback || "No feedback provided."}
-            </div>
-          </div>
+          {/* ════ VIEW MODE ════ */}
+          {!isEditing && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            {[
-              ["Project title",   item.projectTitle  || "—"],
-              ["Contract title",  item.contractTitle || "—"],
-              ["Category",        item.category      || "—"],
-            ].map(([label, val]) => (
-              <div key={label}>
-                <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 13, color: T.textPrimary, fontWeight: 500 }}>{val}</div>
+              {/* Client row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: T.blueDim, borderRadius: 9, border: `1px solid ${T.border}` }}>
+                <Avatar name={item.displayName} src={clientAvatar} size={44} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: T.textPrimary }}>{item.displayName}</div>
+                  <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+                    {[role, item.company].filter(Boolean).join(" · ") || "—"}
+                  </div>
+                </div>
+                <StarRating value={item.rate || 0} />
               </div>
-            ))}
-            <div>
-              <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Status</div>
-              {item.status
-                ? <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: ss.bg, border: `1px solid ${ss.border}`, color: ss.color }}>{item.status}</span>
-                : <span style={{ fontSize: 12, color: T.textMuted, fontStyle: "italic" }}>—</span>}
-            </div>
-          </div>
 
-          {/* Tools */}
-          {item.tools?.length > 0 && (
-            <div>
-              <div style={sectionLabel}>Tools used</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                {item.tools.map(t => (
-                  <span key={t} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, background: T.blueDim, color: "#7eb3fa", border: `1px solid ${T.borderStrong}` }}>{t}</span>
+              {/* Feedback */}
+              <div>
+                <div style={sectionLabel}>Feedback</div>
+                <div style={{ fontSize: 13, color: T.textSecond, lineHeight: 1.7, background: "rgba(0,7,20,0.4)", borderRadius: 8, padding: "12px 14px", border: `1px solid ${T.border}` }}>
+                  {item.feedback || "No feedback provided."}
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                {[
+                  ["Project title",  item.projectTitle  || "—"],
+                  ["Contract title", item.contractTitle || "—"],
+                  ["Company",        item.company       || "—"],
+                  ["Reviewer role",  role               || "—"],
+                ].map(([label, val]) => (
+                  <div key={label}>
+                    <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 13, color: T.textPrimary, fontWeight: 500 }}>{val}</div>
+                  </div>
                 ))}
+
+                <div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Status</div>
+                  {item.status
+                    ? <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: ss.bg, border: `1px solid ${ss.border}`, color: ss.color }}>{item.status}</span>
+                    : <span style={{ fontSize: 12, color: T.textMuted, fontStyle: "italic" }}>—</span>}
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Category</div>
+                  {item.category
+                    ? <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color }}>{item.category}</span>
+                    : <span style={{ fontSize: 12, color: T.textMuted, fontStyle: "italic" }}>—</span>}
+                </div>
               </div>
+
+              {/* Tools */}
+              {item.tools?.length > 0 && (
+                <div>
+                  <div style={sectionLabel}>Tools used</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {item.tools.map(t => (
+                      <span key={t} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, background: T.blueDim, color: "#7eb3fa", border: `1px solid ${T.borderStrong}` }}>{t}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Screenshots ── */}
+              {(ssUrl || rawUrl) && (
+                <div>
+                  <div style={sectionLabel}>Screenshots</div>
+                  <div style={{ display: "grid", gridTemplateColumns: ssUrl && rawUrl ? "1fr 1fr" : "1fr", gap: 10 }}>
+                    {ssUrl && (
+                      <div>
+                        <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6 }}>📸 Feedback screenshot</div>
+                        <a href={ssUrl} target="_blank" rel="noreferrer">
+                          <img
+                            src={ssUrl}
+                            alt="Feedback screenshot"
+                            style={{ width: "100%", borderRadius: 8, border: `1px solid ${T.borderStrong}`, display: "block", objectFit: "cover", maxHeight: 220, cursor: "zoom-in" }}
+                            onError={e => { e.currentTarget.style.display = "none"; }}
+                          />
+                        </a>
+                      </div>
+                    )}
+                    {rawUrl && (
+                      <div>
+                        <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 6 }}>🗂️ Raw screenshot</div>
+                        <a href={rawUrl} target="_blank" rel="noreferrer">
+                          <img
+                            src={rawUrl}
+                            alt="Raw screenshot"
+                            style={{ width: "100%", borderRadius: 8, border: `1px solid ${T.borderStrong}`, display: "block", objectFit: "cover", maxHeight: 220, cursor: "zoom-in" }}
+                            onError={e => { e.currentTarget.style.display = "none"; }}
+                          />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── No screenshot fallback ── */}
+              {!ssUrl && !rawUrl && (
+                <div style={{ padding: "14px", borderRadius: 8, border: `1px dashed ${T.border}`, textAlign: "center" }}>
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>📷</div>
+                  <div style={{ fontSize: 12, color: T.textMuted }}>No screenshots uploaded yet</div>
+                </div>
+              )}
+
+              {/* Cred link */}
+              {item.credibilityLink && (
+                <div>
+                  <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Credibility link</div>
+                  <a href={item.credibilityLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: T.blue, wordBreak: "break-all" }}>{item.credibilityLink}</a>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Cred link */}
-          {item.credibilityLink && (
-            <div>
-              <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 4 }}>Credibility link</div>
-              <a href={item.credibilityLink} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: T.blue, wordBreak: "break-all" }}>{item.credibilityLink}</a>
+          {/* ════ EDIT MODE ════ */}
+          {isEditing && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ marginBottom: 4 }}>
+                <div style={sectionLabel}>Feedback</div>
+                <textarea value={feedback} onChange={e => setFeedback(e.target.value)}
+                  style={{ ...inputStyle, minHeight: 90, resize: "vertical", lineHeight: 1.6 }} />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <Field label="Project title">
+                  <input style={inputStyle} value={projectTitle} onChange={e => setProjectTitle(e.target.value)} />
+                </Field>
+                <Field label="Contract title">
+                  <input style={inputStyle} value={contractTitle} onChange={e => setContractTitle(e.target.value)} />
+                </Field>
+                <Field label="Category">
+                  <select style={inputStyle} value={category} onChange={e => setCategory(e.target.value)}>
+                    <option value="">— select —</option>
+                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </Field>
+                <Field label="Credibility link">
+                  <input style={inputStyle} type="url" value={credLink} onChange={e => setCredLink(e.target.value)} placeholder="https://…" />
+                </Field>
+              </div>
+
+              <div>
+                <div style={sectionLabel}>Rating</div>
+                <StarRating value={rating} onChange={setRating} />
+              </div>
+
+              <div>
+                <div style={sectionLabel}>Status</div>
+                <PillToggle options={STATUSES} selected={status} onToggle={s => setStatus(status === s ? "" : s)} activeColor="#f59e0b" activeBg="rgba(245,158,11,0.12)" />
+              </div>
+
+              <div>
+                <div style={sectionLabel}>Tools used</div>
+                <PillToggle options={TOOLS_LIST} selected={[...tools]} onToggle={toggleTool} />
+              </div>
+
+              {/* ── Screenshots ── */}
+              <div>
+                <div style={sectionLabel}>Screenshots</div>
+
+                {/* Feedback Screenshot */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: T.textSecond, marginBottom: 6 }}>📸 Feedback Screenshot</div>
+
+                  {item.feedbackScreenshot && !deleteFeedbackSs && !screenshotFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <img
+                        src={item.feedbackScreenshot}
+                        alt="Current feedback screenshot"
+                        style={{ width: 80, height: 52, objectFit: "cover", borderRadius: 6, border: `1px solid ${T.borderStrong}` }}
+                      />
+                      <span style={{ fontSize: 11, color: T.textMuted }}>Current</span>
+                      <button
+                        onClick={() => setDeleteFeedbackSs(true)}
+                        style={{ fontSize: 11, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontFamily: "inherit" }}>
+                        🗑️ Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {deleteFeedbackSs && !screenshotFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, color: "#f87171" }}>⚠ Will be removed on save</span>
+                      <button
+                        onClick={() => setDeleteFeedbackSs(false)}
+                        style={{ fontSize: 11, color: T.textSecond, background: "none", border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontFamily: "inherit" }}>
+                        Undo
+                      </button>
+                    </div>
+                  )}
+
+                  <UploadZone
+                    label="Upload new feedback screenshot"
+                    hint="Replaces current · JPG PNG WEBP"
+                    emoji="📸"
+                    preview={screenshotPreview}
+                    onChange={f => {
+                      setScreenshotFile(f);
+                      setScreenshotPreview(f ? URL.createObjectURL(f) : null);
+                      if (f) setDeleteFeedbackSs(false);
+                    }}
+                  />
+                  {screenshotFile && (
+                    <button
+                      onClick={() => { setScreenshotFile(null); setScreenshotPreview(null); }}
+                      style={{ marginTop: 4, fontSize: 11, color: T.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                      × Clear new upload
+                    </button>
+                  )}
+                </div>
+
+                {/* Raw Screenshot */}
+                <div>
+                  <div style={{ fontSize: 11, color: T.textSecond, marginBottom: 6 }}>🗂️ Raw Screenshot</div>
+
+                  {item.rawScreenshot && !deleteRawSs && !rawFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <img
+                        src={item.rawScreenshot}
+                        alt="Current raw screenshot"
+                        style={{ width: 80, height: 52, objectFit: "cover", borderRadius: 6, border: `1px solid ${T.borderStrong}` }}
+                      />
+                      <span style={{ fontSize: 11, color: T.textMuted }}>Current</span>
+                      <button
+                        onClick={() => setDeleteRawSs(true)}
+                        style={{ fontSize: 11, color: "#f87171", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontFamily: "inherit" }}>
+                        🗑️ Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {deleteRawSs && !rawFile && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <span style={{ fontSize: 11, color: "#f87171" }}>⚠ Will be removed on save</span>
+                      <button
+                        onClick={() => setDeleteRawSs(false)}
+                        style={{ fontSize: 11, color: T.textSecond, background: "none", border: `1px solid ${T.borderStrong}`, borderRadius: 6, padding: "3px 9px", cursor: "pointer", fontFamily: "inherit" }}>
+                        Undo
+                      </button>
+                    </div>
+                  )}
+
+                  <UploadZone
+                    label="Upload new raw screenshot"
+                    hint="Original unedited · JPG PNG WEBP"
+                    emoji="🗂️"
+                    preview={rawPreview}
+                    onChange={f => {
+                      setRawFile(f);
+                      setRawPreview(f ? URL.createObjectURL(f) : null);
+                      if (f) setDeleteRawSs(false);
+                    }}
+                  />
+                  {rawFile && (
+                    <button
+                      onClick={() => { setRawFile(null); setRawPreview(null); }}
+                      style={{ marginTop: 4, fontSize: 11, color: T.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                      × Clear new upload
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {editResult && (
+                <div style={{ padding: "8px 12px", borderRadius: 7, fontSize: 12,
+                  background: editResult.type === "success" ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                  color:      editResult.type === "success" ? "#4ade80"              : "#f87171",
+                  border: `1px solid ${editResult.type === "success" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}` }}>
+                  {editResult.msg}
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
+                <button onClick={() => setIsEditing(false)}
+                  style={{ padding: "8px 16px", fontSize: 12, border: `1px solid ${T.borderStrong}`, borderRadius: 7, background: "transparent", color: T.textSecond, cursor: "pointer", fontFamily: "inherit" }}>
+                  Cancel
+                </button>
+                <button onClick={handleSave} disabled={editSubmitting}
+                  style={{ padding: "8px 20px", fontSize: 12, border: "none", borderRadius: 7, background: editSubmitting ? "#4b5563" : T.blue, color: "#fff", cursor: editSubmitting ? "not-allowed" : "pointer", fontWeight: 500, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 5 }}>
+                  {editSubmitting ? "⏳ Saving…" : "💾 Save changes"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -750,7 +1126,20 @@ function ViewModal({ item, onClose }) {
   );
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────
+// ── SS Thumb helper ───────────────────────────────────────────────────────────
+function SsThumb({ url, label }) {
+  const resolved = resolveScreenshot(url);
+  if (!resolved) return <span style={{ color: T.textMuted, fontStyle: "italic", fontSize: 11 }}>—</span>;
+  return (
+    <a href={resolved} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+      title={label}
+      style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 38, height: 26, borderRadius: 4, background: T.blueDim, border: `1px solid ${T.borderStrong}`, fontSize: 9, color: "#7eb3fa", textDecoration: "none", cursor: "pointer" }}>
+      📷
+    </a>
+  );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function TestimonialsDashboard() {
   const [clients, setClients]               = useState([]);
   const [clientsLoading, setClientsLoading] = useState(false);
@@ -764,7 +1153,6 @@ export default function TestimonialsDashboard() {
   const [submitting, setSubmitting]         = useState(false);
   const [showProperties, setShowProperties] = useState(false);
 
-  const [editingId, setEditingId]           = useState(null);
   const [editResult, setEditResult]         = useState(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -853,8 +1241,11 @@ export default function TestimonialsDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Update failed.");
       setEditResult({ type: "success", msg: "✓ Saved!" });
-      setTimeout(() => { setEditingId(null); setEditResult(null); }, 900);
-      fetchTestimonials();
+      setTimeout(() => {
+        setEditResult(null);
+        setViewItem(null); // close modal after save
+        fetchTestimonials();
+      }, 900);
     } catch (err) { setEditResult({ type: "error", msg: err.message }); }
     finally { setEditSubmitting(false); }
   }
@@ -871,7 +1262,41 @@ export default function TestimonialsDashboard() {
     finally { setDeleteLoading(false); }
   }
 
-  const COL_COUNT = 6;
+  // 15 columns — last col no longer needs action button space
+  const COL_COUNT = 15;
+
+  const COLS = [
+    { key: "feedback",          label: "Feedback",          w: 200 },
+    { key: "status",            label: "Status",            w: 142 },
+    { key: "contractTitle",     label: "Contract Title",    w: 170 },
+    { key: "company",           label: "Company",           w: 130 },
+    { key: "displayName",       label: "Display Name",      w: 115 },
+    { key: "projectTitle",      label: "Project Title",     w: 175 },
+    { key: "client",            label: "Client",            w: 155 },
+    { key: "clientProfile",     label: "Client Profile",    w: 110 },
+    { key: "reviewerRole",      label: "Reviewer Role",     w: 130 },
+    { key: "tools",             label: "Tools",             w: 165 },
+    { key: "rawScreenshot",     label: "Raw SS",            w: 72  },
+    { key: "feedbackScreenshot",label: "Feedback SS",       w: 88  },
+    { key: "credibilityLink",   label: "Credibility Link",  w: 150 },
+    { key: "category",          label: "Category",          w: 152 },
+    { key: "rate",              label: "Rating",            w: 90  },
+  ];
+
+  const thStyle = (w) => ({
+    padding: "10px 12px", fontWeight: 500, fontSize: 10, color: T.textMuted,
+    textAlign: "left", textTransform: "uppercase", letterSpacing: "0.06em",
+    whiteSpace: "nowrap", width: w, minWidth: w,
+    borderRight: `1px solid rgba(59,130,246,0.1)`,
+  });
+
+  const tdBase = (w, extra = {}) => ({
+    padding: "10px 12px", verticalAlign: "middle",
+    width: w, minWidth: w, maxWidth: w,
+    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+    borderRight: `1px solid rgba(59,130,246,0.07)`,
+    ...extra,
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: T.navy, padding: "2rem 1rem", fontFamily: "system-ui, -apple-system, sans-serif" }}>
@@ -888,10 +1313,19 @@ export default function TestimonialsDashboard() {
         <DeleteModal item={deleteTarget} onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} loading={deleteLoading} />
       )}
 
-      {viewItem && <ViewModal item={viewItem} onClose={() => setViewItem(null)} />}
+      {viewItem && (
+        <ViewModal
+          item={viewItem}
+          onClose={() => { setViewItem(null); setEditResult(null); }}
+          onDelete={(item) => setDeleteTarget(item)}
+          onSave={handleEdit}
+          editSubmitting={editSubmitting}
+          editResult={editResult}
+        />
+      )}
 
       {/* ── Table container ── */}
-      <div style={{ width: "100%", maxWidth: 1140, margin: "0 auto", background: T.navyCard, borderRadius: 16, border: `1px solid ${T.borderStrong}`, overflow: "hidden" }}>
+      <div style={{ width: "100%", maxWidth: "100%", margin: "0 auto", background: T.navyCard, borderRadius: 16, border: `1px solid ${T.borderStrong}`, overflow: "hidden" }}>
 
         {/* Toolbar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 22px", borderBottom: `1px solid ${T.border}`, background: T.navyDeep }}>
@@ -918,21 +1352,21 @@ export default function TestimonialsDashboard() {
         </div>
 
         {tableError && (
-          <div style={{ padding: "10px 22px", background: "rgba(239,68,68,0.1)", border: `1px solid rgba(239,68,68,0.3)`, color: "#f87171", fontSize: 13, margin: "12px 22px", borderRadius: 8 }}>
+          <div style={{ padding: "10px 22px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#f87171", fontSize: 13, margin: "12px 22px", borderRadius: 8 }}>
             ⚠ {tableError}
           </div>
         )}
 
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, tableLayout: "fixed" }}>
+        {/* Horizontally scrollable table */}
+        <div style={{ overflowX: "auto", width: "100%" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed", width: COLS.reduce((s, c) => s + c.w, 0) }}>
             <thead>
               <tr style={{ background: T.navyDeep, borderBottom: `1px solid ${T.borderStrong}` }}>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "left", textTransform: "uppercase", letterSpacing: "0.05em", width: 185 }}>Client</th>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "left", textTransform: "uppercase", letterSpacing: "0.05em", width: 165 }}>Project</th>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "left", textTransform: "uppercase", letterSpacing: "0.05em" }}>Feedback</th>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "left", textTransform: "uppercase", letterSpacing: "0.05em", width: 100 }}>Rating</th>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "left", textTransform: "uppercase", letterSpacing: "0.05em", width: 135 }}>Status</th>
-                <th style={{ padding: "10px 16px", fontWeight: 500, fontSize: 11, color: T.textMuted, textAlign: "right", textTransform: "uppercase", letterSpacing: "0.05em", width: 100 }}>Actions</th>
+                {COLS.map((col, i) => (
+                  <th key={col.key} style={{ ...thStyle(col.w), borderRight: i < COLS.length - 1 ? `1px solid rgba(59,130,246,0.1)` : "none" }}>
+                    {col.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -942,95 +1376,132 @@ export default function TestimonialsDashboard() {
                 <tr><td colSpan={COL_COUNT} style={{ padding: 32, textAlign: "center", color: T.textMuted }}>No testimonials yet. Click <strong style={{ color: T.blue }}>+ Create</strong> to add one.</td></tr>
               ) : (
                 testimonials.map((item, index) => {
-                  const isEditing = editingId === item.id;
-                  const ss = statusStyle(item.status);
-                  const fText = item.feedback || "";
+                  const ss   = statusStyle(item.status);
+                  const cs   = categoryStyle(item.category);
+                  const role = resolveRole(item);
+                  // Screenshots strictly from screenshot fields
+                  // ✅ NEW
+                  const ssUrl  = resolveScreenshot(item.feedbackScreenshot);
+                  const rawUrl = resolveScreenshot(item.rawScreenshot);
 
-                  return [
+                  return (
                     <tr key={item.id || index}
-                      onClick={() => { if (!isEditing) setViewItem(item); }}
+                      onClick={() => setViewItem(item)}
                       style={{
                         borderBottom: `1px solid ${T.border}`,
-                        background: isEditing ? T.navyDeep : index % 2 === 0 ? T.navyRow : T.navyRowAlt,
+                        background: index % 2 === 0 ? T.navyRow : T.navyRowAlt,
                         transition: "background 0.1s",
-                        cursor: isEditing ? "default" : "pointer",
+                        cursor: "pointer",
                       }}
-                      onMouseEnter={e => { if (!isEditing) e.currentTarget.style.background = "rgba(59,130,246,0.12)"; }}
-                      onMouseLeave={e => { if (!isEditing) e.currentTarget.style.background = index % 2 === 0 ? T.navyRow : T.navyRowAlt; }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(59,130,246,0.12)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = index % 2 === 0 ? T.navyRow : T.navyRowAlt; }}
                     >
-                      {/* Client */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle", overflow: "hidden" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                          <Avatar name={item.displayName || "?"} src={item.image} size={28} />
-                          <div style={{ minWidth: 0 }}>
-                            <div style={{ fontWeight: 500, color: T.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.displayName || "Unknown"}</div>
-                            {item.company && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.company}</div>}
-                          </div>
-                        </div>
+                      {/* 1. Feedback */}
+                      <td style={tdBase(COLS[0].w)} title={item.feedback}>
+                        <span style={{ color: T.textSecond, fontSize: 11 }}>{item.feedback || "—"}</span>
                       </td>
-                      {/* Project */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle", overflow: "hidden" }}>
-                        <div style={{ fontWeight: 500, color: T.textPrimary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.projectTitle || "—"}</div>
-                        {item.contractTitle && <div style={{ fontSize: 11, color: T.textMuted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.contractTitle}</div>}
-                        {item.category && (
-                          <span style={{ display: "inline-block", background: T.blueDim, border: `1px solid ${T.border}`, fontSize: 10, color: "#7eb3fa", padding: "2px 7px", borderRadius: 4, marginTop: 4 }}>
-                            {item.category}
-                          </span>
-                        )}
-                      </td>
-                      {/* Feedback */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle", overflow: "hidden", maxWidth: 0 }}>
-                        <div style={{ color: T.textSecond, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {fText || "—"}
-                        </div>
-                        {item.tools?.length > 0 && (
-                          <div style={{ display: "flex", gap: 3, flexWrap: "nowrap", marginTop: 5, overflow: "hidden" }}>
-                            {item.tools.slice(0, 4).map(t => (
-                              <span key={t} style={{ fontSize: 9, background: T.blueDim, color: "#7eb3fa", padding: "1px 5px", borderRadius: 3, whiteSpace: "nowrap", border: `1px solid ${T.border}` }}>{t}</span>
-                            ))}
-                            {item.tools.length > 4 && <span style={{ fontSize: 9, color: T.textMuted }}>+{item.tools.length - 4}</span>}
-                          </div>
-                        )}
-                      </td>
-                      {/* Rating */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle" }}>
-                        <StarRating value={item.rate || 0} />
-                      </td>
-                      {/* Status */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle" }}>
+
+                      {/* 2. Status */}
+                      <td style={tdBase(COLS[1].w)}>
                         {item.status
-                          ? <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: ss.bg, border: `1px solid ${ss.border}`, color: ss.color }}>{item.status}</span>
+                          ? <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: 20, fontSize: 10, fontWeight: 500, background: ss.bg, border: `1px solid ${ss.border}`, color: ss.color, whiteSpace: "nowrap" }}>{item.status}</span>
                           : <span style={{ color: T.textMuted, fontStyle: "italic", fontSize: 11 }}>—</span>}
                       </td>
-                      {/* Actions */}
-                      <td style={{ padding: "11px 16px", verticalAlign: "middle", textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); setEditingId(isEditing ? null : item.id); setEditResult(null); }}
-                            style={{ padding: "4px 9px", fontSize: 11, border: `1px solid ${isEditing ? T.blue : T.borderStrong}`, borderRadius: 6, background: isEditing ? T.blueDim : "transparent", color: isEditing ? T.blue : T.textSecond, cursor: "pointer", fontFamily: "inherit" }}>
-                            {isEditing ? "✕" : "✏️"}
-                          </button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setDeleteTarget(item); }}
-                            style={{ padding: "4px 9px", fontSize: 11, border: "1px solid rgba(239,68,68,0.3)", borderRadius: 6, background: "transparent", color: "#f87171", cursor: "pointer", fontFamily: "inherit" }}>
-                            🗑️
-                          </button>
+
+                      {/* 3. Contract Title */}
+                      <td style={tdBase(COLS[2].w)} title={item.contractTitle}>
+                        <span style={{ color: T.textPrimary, fontWeight: 500, fontSize: 12 }}>{item.contractTitle || "—"}</span>
+                      </td>
+
+                      {/* 4. Company */}
+                      <td style={tdBase(COLS[3].w)} title={item.company}>
+                        <span style={{ color: T.textSecond }}>{item.company || "—"}</span>
+                      </td>
+
+                      {/* 5. Display Name */}
+                      <td style={tdBase(COLS[4].w)}>
+                        <span style={{ color: T.textPrimary, fontWeight: 500 }}>{item.displayName || "—"}</span>
+                      </td>
+
+                      {/* 6. Project Title */}
+                      <td style={tdBase(COLS[5].w)} title={item.projectTitle}>
+                        <span style={{ color: T.textSecond, fontSize: 11 }}>{item.projectTitle || "—"}</span>
+                      </td>
+
+                      {/* 7. Client */}
+                      <td style={tdBase(COLS[6].w)}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0 }}>
+                          <Avatar name={item.displayName || "?"} src={resolveImageUrl(item)} size={24} />
+                          <span style={{ fontWeight: 500, color: T.textPrimary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12 }}>
+                            {item.displayName || "Unknown"}
+                          </span>
                         </div>
                       </td>
-                    </tr>,
 
-                    isEditing && (
-                      <InlineEditRow
-                        key={`edit-${item.id}`}
-                        item={item}
-                        colCount={COL_COUNT}
-                        onSave={fields => handleEdit(item.id, fields)}
-                        onCancel={() => { setEditingId(null); setEditResult(null); }}
-                        submitting={editSubmitting}
-                        result={editResult}
-                      />
-                    ),
-                  ];
+                      {/* 8. Client Profile */}
+                      <td style={tdBase(COLS[7].w)}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <Avatar name={item.displayName || "?"} src={resolveImageUrl(item)} size={22} />
+                          <span style={{ fontSize: 11, color: T.textMuted }}>{item.displayName?.split(" ")?.[0] || "—"}</span>
+                        </div>
+                      </td>
+
+                      {/* 9. Reviewer Role — now resolved from formula */}
+                      <td style={tdBase(COLS[8].w)} title={role}>
+                        <span style={{ fontSize: 11, color: T.textSecond }}>{role || "—"}</span>
+                      </td>
+
+                      {/* 10. Tools */}
+                      <td style={{ ...tdBase(COLS[9].w), whiteSpace: "normal" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>
+                          {item.tools?.length > 0
+                            ? item.tools.slice(0, 3).map(t => (
+                                <span key={t} style={{ fontSize: 9, padding: "2px 5px", borderRadius: 3, background: T.blueDim, color: "#7eb3fa", border: `1px solid ${T.border}`, whiteSpace: "nowrap" }}>{t}</span>
+                              ))
+                            : <span style={{ color: T.textMuted, fontStyle: "italic", fontSize: 11 }}>—</span>
+                          }
+                          {item.tools?.length > 3 && <span style={{ fontSize: 9, color: T.textMuted }}>+{item.tools.length - 3}</span>}
+                        </div>
+                      </td>
+
+                      {/* 11. Raw Screenshot */}
+                      <td style={{ ...tdBase(COLS[10].w), textAlign: "center" }}>
+                        <SsThumb url={rawUrl} label="Raw screenshot" />
+                      </td>
+
+                      {/* 12. Feedback Screenshot */}
+                      <td style={{ ...tdBase(COLS[11].w), textAlign: "center" }}>
+                        <SsThumb url={ssUrl} label="Feedback screenshot" />
+                      </td>
+
+                      {/* 13. Credibility Link */}
+                      <td style={tdBase(COLS[12].w)} title={item.credibilityLink}>
+                        {item.credibilityLink
+                          ? <a href={item.credibilityLink} target="_blank" rel="noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              style={{ fontSize: 11, color: T.blue, textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", display: "block" }}>
+                              {item.credibilityLink.replace(/^https?:\/\//, "")}
+                            </a>
+                          : <span style={{ color: T.textMuted, fontStyle: "italic", fontSize: 11 }}>—</span>}
+                      </td>
+
+                      {/* 14. Category */}
+                      <td style={tdBase(COLS[13].w)}>
+                        {item.category
+                          ? <span style={{ display: "inline-block", padding: "3px 9px", borderRadius: 20, fontSize: 10, fontWeight: 500, background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color, whiteSpace: "nowrap" }}>{item.category}</span>
+                          : <span style={{ color: T.textMuted, fontStyle: "italic", fontSize: 11 }}>—</span>}
+                      </td>
+
+                      {/* 15. Rating — clean, no buttons */}
+                      <td style={{ ...tdBase(COLS[14].w), borderRight: "none" }}>
+                        <div style={{ display: "flex", gap: 1 }}>
+                          {[1,2,3,4,5].map(n => (
+                            <span key={n} style={{ fontSize: 11, color: n <= (item.rate || 0) ? "#f59e0b" : "#1e3a6e" }}>★</span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  );
                 })
               )}
             </tbody>
@@ -1038,7 +1509,7 @@ export default function TestimonialsDashboard() {
         </div>
 
         <div style={{ padding: "9px 22px", fontSize: 11, color: T.textMuted, textAlign: "right", borderTop: `1px solid ${T.border}`, background: T.navyDeep }}>
-          Showing {testimonials.length} row{testimonials.length !== 1 ? "s" : ""}
+          Showing {testimonials.length} row{testimonials.length !== 1 ? "s" : ""} · {COL_COUNT} columns · click any row to view details
         </div>
       </div>
     </div>

@@ -778,7 +778,7 @@ function Modal({ t, onClose, isDark }) {
         )}
 
         {/* ── Upwork Feedback — now zoomable ── */}
-        {t.rawScreenshot && (
+        {t.feedbackScreenshot && (
           <div style={{ marginBottom: "18px" }}>
             <p
               style={{
@@ -794,7 +794,7 @@ function Modal({ t, onClose, isDark }) {
               Upwork Feedback
             </p>
             <ZoomableImage
-              src={proxyImage(t.rawScreenshot)}
+              src={proxyImage(t.feedbackScreenshot)}
               alt="Feedback screenshot"
               style={{
                 borderRadius: "10px",
