@@ -6,7 +6,7 @@ import { ToolsCarousel } from "./ToolsCarousel";
 import FAQSection from "../components/FAQSection";
 
 /* ── API Base ─────────────────────────────────────────────── */
-const API_BASE = "https://notionnik-backend-production.up.railway.app" || import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL;
 
 const API_KEY = import.meta.env.VITE_API_SECRET;
 

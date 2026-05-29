@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import TestimonialsDashboard from "./testimonials_admin";
+import ServicesDashboard from "./services_admin";
 
 // ── Nav config ────────────────────────────────────────────────────
 const NAV = [
@@ -8,7 +9,7 @@ const NAV = [
     items: [
       { id: "testimonials", label: "Testimonials", icon: "⭐" },
       { id: "members",      label: "Members",      icon: "👤", soon: true },
-      { id: "services",     label: "Services",     icon: "🛠️", soon: true },
+      { id: "services",     label: "Services",     icon: "🛠️" },
     ],
   },
 ];
@@ -355,7 +356,7 @@ function PageContent({ active }) {
   switch (active) {
     case "testimonials": return <TestimonialsDashboard />;
     case "members":      return <ComingSoon label="Members" icon="👤" />;
-    case "services":     return <ComingSoon label="Services" icon="🛠️" />;
+    case "services":     return <ServicesDashboard />;
     default:             return null;
   }
 }

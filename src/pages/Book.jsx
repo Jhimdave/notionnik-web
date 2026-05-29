@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "./ThemeContext";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "https://notionnik-backend-production.up.railway.app";
+  import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_SECRET;
 
 /* ── Helpers ─────────────────────────────────────────────────────── */

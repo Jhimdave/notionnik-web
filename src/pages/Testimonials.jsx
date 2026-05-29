@@ -13,7 +13,7 @@ const COLORS = [
   "#1a5fc0",
 ];
 
-const API_BASE = "https://notionnik-backend-production.up.railway.app" || import.meta.env.VITE_API_URL;
+const API_BASE =  import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_SECRET;
 const PAGE_SIZE = 6;
 

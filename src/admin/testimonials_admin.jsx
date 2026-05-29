@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const BASE_URL    = "https://notionnik-backend-production.up.railway.app" || import.meta.env.VITE_API_URL;
+const BASE_URL    = import.meta.env.VITE_API_URL;
 const API_KEY     = import.meta.env.VITE_API_CLIENT_KEY;
 const API_KEY_GET = import.meta.env.VITE_API_SECRET;
 
