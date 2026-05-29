@@ -374,7 +374,7 @@ export default function AdminDashboard() {
 
   function handleLogoutConfirm() {
     localStorage.removeItem("admin_token");
-    window.location.href = "/admin/login";
+    window.location.href = "/";
   }
 
   const sideW = collapsed ? 64 : 240;
