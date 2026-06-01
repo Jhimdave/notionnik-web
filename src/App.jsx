@@ -16,7 +16,7 @@ import AboutUs         from './pages/AboutUs'
 import Book            from './pages/Book'
 import Contact         from './pages/Contact'
 import './App.css'
-import ChatBox from './components/AiAgent'
+import ChatBox from './components/Chatbot'
 import Admin from './admin/admin-side'
 import AdminDashboard from './admin/admin_dashboard'
 

@@ -2,31 +2,38 @@ import { useState, useRef, useEffect } from 'react'
 
 const API_BASE    = import.meta.env.VITE_API_URL;
 const WEBHOOK_URL = `${API_BASE}/api/chat`
-const API_KEY = import.meta.env.VITE_API_SECRET;
+const API_KEY     = import.meta.env.VITE_API_SECRET;
 
 const BOT_RESPONSES = {
   default: "Hi! I'm NotionBot 🤖 I can help answer questions about our services. What would you like to know?",
 }
 
-// Parses **bold** markdown and returns an array of React nodes
-function parseBold(text) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>
-    }
-    return part
+function parseText(text) {
+  return text.split('\n').map((line, lineIdx, lines) => {
+    const parts = line.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>
+      }
+      return part
+    })
+    return (
+      <span key={lineIdx}>
+        {parts}
+        {lineIdx < lines.length - 1 && <br />}
+      </span>
+    )
   })
 }
 
 export default function Chatbot({ forceOpen, onOpened }) {
-  const [open,           setOpen]           = useState(false)
-  const [msgs,           setMsgs]           = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
-  const [input,          setInput]          = useState('')
-  const [typing,         setTyping]         = useState(false)
-  const [unread,         setUnread]         = useState(1)
-  const [conversationId, setConversationId] = useState(null)
-  const [showSuggestions,setShowSuggestions]= useState(true)
+  const [open,               setOpen]               = useState(false)
+  const [msgs,               setMsgs]               = useState([{ from: 'bot', text: BOT_RESPONSES.default }])
+  const [input,              setInput]              = useState('')
+  const [typing,             setTyping]             = useState(false)
+  const [unread,             setUnread]             = useState(1)
+  const [conversationId,     setConversationId]     = useState(null)
+  const [conversationHistory,setConversationHistory]= useState([])
+  const [showSuggestions,    setShowSuggestions]    = useState(true)
   const bottomRef = useRef(null)
 
   // Allow external open
@@ -54,15 +61,23 @@ export default function Chatbot({ forceOpen, onOpened }) {
     setTyping(true)
     setShowSuggestions(false)
 
+    // Build the updated history to send (append new user message)
+    const updatedHistory = [
+      ...conversationHistory,
+      { role: 'user', content: txt },
+    ]
+
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json','x-api-key' : API_KEY },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': API_KEY,
+        },
         body: JSON.stringify({
           message:        txt,
-          timestamp:      new Date().toISOString(),
-          source:         'NotionNik Chatbot',
           conversationId: conversationId || '',
+          conversation:   updatedHistory,
         }),
       })
 
@@ -77,6 +92,12 @@ export default function Chatbot({ forceOpen, onOpened }) {
         data.response ||
         data.reply ||
         "Thanks for your message! Our team will get back to you shortly. You can also reach us on WhatsApp at +63 966 367 1854."
+
+      // Update conversation history with assistant reply
+      setConversationHistory([
+        ...updatedHistory,
+        { role: 'assistant', content: reply },
+      ])
 
       setTimeout(() => {
         setTyping(false)
@@ -139,7 +160,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
                   ? 'bg-brand-500 text-white rounded-br-sm'
                   : 'bg-navy-700/80 text-blue-100/90 border border-white/[0.07] rounded-bl-sm'
                 }`}>
-                {parseBold(m.text)}
+                {parseText(m.text)}
               </div>
             </div>
           ))}
