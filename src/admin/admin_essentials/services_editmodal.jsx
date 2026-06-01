@@ -1,16 +1,172 @@
 import { useState, useEffect } from "react";
 import {
   T, TOOLS_OPTIONS, FEATURES_OPTIONS, CORE_PROP_NAMES,
+  BASE_URL, ADMIN_KEY,
   inputStyle, sectionLabel, divider,
 } from "./constants";
 import { statusStyle, extractAnyProp } from "./helper";
 import { Field, PillToggle, UploadZone, AlertBox, DynamicCell } from "./primitives";
 
-// ── Dynamic field editor — renders the right input per property type ──
-function DynamicField({ prop, value, onChange }) {
+
+// ── People picker — own component so hooks are always called ──────
+function PeoplePicker({ name, value, onChange }) {
+  const existing       = Array.isArray(value) ? value : [];
+  const [users,   setUsers]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState("");
+  const [selected, setSelected] = useState(() => existing.map(p => p.id ?? p));
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/admin/notion-users`, { headers: { "x-api-key": ADMIN_KEY } })
+      .then(r => r.json())
+      .then(d => { if (d.success) setUsers(d.data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  function toggle(userId) {
+    const next = selected.includes(userId)
+      ? selected.filter(id => id !== userId)
+      : [...selected, userId];
+    setSelected(next);
+    onChange(next);
+  }
+
+  const filtered = users.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase()) ||
+    (u.email || "").toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Field label={name}>
+      {loading ? (
+        <div style={{ fontSize: 11, color: T.textMuted, padding: "8px 0" }}>Loading workspace members…</div>
+      ) : (
+        <div style={{ border: `1px solid ${T.borderStrong}`, borderRadius: 8, overflow: "hidden" }}>
+          <input
+            style={{ ...inputStyle, borderRadius: 0, borderBottom: `1px solid ${T.borderStrong}`, margin: 0 }}
+            placeholder="Search members…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <div style={{ maxHeight: 180, overflowY: "auto" }}>
+            {filtered.length === 0 && (
+              <div style={{ padding: "10px 12px", fontSize: 11, color: T.textMuted }}>No members found.</div>
+            )}
+            {filtered.map(u => {
+              const isSelected = selected.includes(u.id);
+              return (
+                <div
+                  key={u.id}
+                  onClick={() => toggle(u.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "8px 12px", cursor: "pointer",
+                    background: isSelected ? "rgba(59,130,246,0.1)" : "transparent",
+                    borderBottom: `1px solid ${T.border}`,
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                >
+                  {u.avatarUrl ? (
+                    <img src={u.avatarUrl} alt={u.name}
+                      style={{ width: 26, height: 26, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 26, height: 26, borderRadius: "50%", background: T.blueDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: T.blue, fontWeight: 700, flexShrink: 0 }}>
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: T.textPrimary, fontWeight: isSelected ? 600 : 400 }}>{u.name}</div>
+                    {u.email && <div style={{ fontSize: 10, color: T.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>}
+                  </div>
+                  {isSelected && <span style={{ color: T.blue, fontSize: 14, flexShrink: 0 }}>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+          {selected.length > 0 && (
+            <div style={{ padding: "6px 12px", fontSize: 10, color: T.blue, background: "rgba(59,130,246,0.06)", borderTop: `1px solid ${T.border}` }}>
+              {selected.length} member{selected.length !== 1 ? "s" : ""} selected
+            </div>
+          )}
+        </div>
+      )}
+    </Field>
+  );
+}
+
+
+// ── Files field — own component so hooks are always called ────────
+function FilesField({ name, value, onFileChange }) {
+  const existingUrl = Array.isArray(value) ? value[0] : value;
+  const [fileObj, setFileObj] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const isImage = (url) => url && /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(url);
+
+  function handleFile(f) {
+    setFileObj(f);
+    setPreview(f ? URL.createObjectURL(f) : null);
+    onFileChange?.(name, f);
+  }
+
+  return (
+    <Field label={name}>
+      {existingUrl && !preview && (
+        <div style={{ marginBottom: 8 }}>
+          {isImage(existingUrl) ? (
+            <img src={existingUrl} alt={name}
+              style={{ maxHeight: 80, maxWidth: "100%", borderRadius: 6, border: `1px solid ${T.borderStrong}`, objectFit: "contain", background: "rgba(0,0,0,0.3)", padding: 4 }} />
+          ) : (
+            <a href={existingUrl} target="_blank" rel="noreferrer"
+              style={{ fontSize: 11, color: T.blue, wordBreak: "break-all" }}>
+              📎 View existing file
+            </a>
+          )}
+          <div style={{ fontSize: 10, color: T.textMuted, marginTop: 4 }}>
+            Existing file — upload below to replace
+          </div>
+        </div>
+      )}
+      {preview && (
+        <div style={{ marginBottom: 8 }}>
+          <img src={preview} alt="preview"
+            style={{ maxHeight: 80, maxWidth: "100%", borderRadius: 6, border: `1px solid ${T.borderStrong}`, objectFit: "contain", background: "rgba(0,0,0,0.3)", padding: 4 }} />
+          <div style={{ fontSize: 10, color: "#4ade80", marginTop: 4 }}>✓ New file selected</div>
+        </div>
+      )}
+      <UploadZone
+        label={existingUrl ? "Replace file" : `Upload ${name}`}
+        hint="Any image or file"
+        emoji="📎"
+        preview={null}
+        onChange={handleFile}
+      />
+      {fileObj && (
+        <button
+          onClick={() => { setFileObj(null); setPreview(null); onFileChange?.(name, null); }}
+          style={{ marginTop: 4, fontSize: 11, color: T.textMuted, background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+          × Clear new file
+        </button>
+      )}
+    </Field>
+  );
+}
+
+
+// ── Dynamic field editor ──────────────────────────────────────────
+function DynamicField({ prop, value, onChange, onFileChange }) {
   const { name, type, options: propOptions = [] } = prop;
 
-  // Multi-select: pill toggles from available options
+  if (type === "files") {
+    return <FilesField name={name} value={value} onFileChange={onFileChange} />;
+  }
+
+  if (type === "people") {
+    return <PeoplePicker name={name} value={value} onChange={onChange} />;
+  }
+
   if (type === "multi_select") {
     const available = propOptions.map(o => o.name);
     const selected  = Array.isArray(value) ? value : [];
@@ -41,7 +197,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Select: dropdown from available options
   if (type === "select") {
     const available = propOptions.map(o => o.name);
     return (
@@ -58,7 +213,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Checkbox
   if (type === "checkbox") {
     return (
       <Field label={name}>
@@ -75,7 +229,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Number
   if (type === "number") {
     return (
       <Field label={name}>
@@ -90,7 +243,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Date
   if (type === "date") {
     return (
       <Field label={name}>
@@ -104,7 +256,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // URL
   if (type === "url") {
     return (
       <Field label={name}>
@@ -119,7 +270,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Email
   if (type === "email") {
     return (
       <Field label={name}>
@@ -134,7 +284,6 @@ function DynamicField({ prop, value, onChange }) {
     );
   }
 
-  // Phone
   if (type === "phone_number") {
     return (
       <Field label={name}>
@@ -162,26 +311,25 @@ function DynamicField({ prop, value, onChange }) {
   );
 }
 
-// ── Service Form — create & edit (with dynamic props) ─────────────
+
+// ── Service Form ──────────────────────────────────────────────────
 export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSubmit, onCancel, submitting, result }) {
-  const [title,              setTitle]       = useState(initial.title              || "");
-  const [serviceHeader,      setHeader]      = useState(initial.serviceHeader      || "");
-  const [serviceDescription, setDesc]        = useState(initial.serviceDescription || "");
-  const [tools,              setTools]       = useState(new Set(initial.tools      || []));
-  const [features,           setFeatures]    = useState(new Set(initial.features   || []));
-  const [logoFile,           setLogoFile]    = useState(null);
+  const [title,              setTitle]    = useState(initial.title              || "");
+  const [serviceHeader,      setHeader]   = useState(initial.serviceHeader      || "");
+  const [serviceDescription, setDesc]     = useState(initial.serviceDescription || "");
+  const [tools,              setTools]    = useState(new Set(initial.tools      || []));
+  const [features,           setFeatures] = useState(new Set(initial.features   || []));
+  const [logoFile,           setLogoFile] = useState(null);
   const [logoPreview,        setLogoPreview] = useState(null);
 
-  // Non-core props from DB schema
   const extraProps = dbProps.filter(p => !CORE_PROP_NAMES.has(p.name) && p.type !== "title");
 
-  // Dynamic extra props — keyed by prop name → current value
-  // Re-initialise whenever `initial` or `extraProps` change (e.g. modal reopened for a different item)
-  const [dynValues, setDynValues] = useState(() => buildInitialDyn(extraProps, initial));
+  const [dynValues,   setDynValues]   = useState(() => buildInitialDyn(extraProps, initial));
+  const [dynFileObjs, setDynFileObjs] = useState({});
 
   useEffect(() => {
     setDynValues(buildInitialDyn(extraProps, initial));
-    // Also reset core fields when initial changes (edit modal re-used for different item)
+    setDynFileObjs({});
     setTitle(initial.title              || "");
     setHeader(initial.serviceHeader     || "");
     setDesc(initial.serviceDescription  || "");
@@ -190,24 +338,24 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
     setLogoFile(null);
     setLogoPreview(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial.id]); // re-run only when the item itself changes
+  }, [initial.id]);
 
   function buildInitialDyn(props, item) {
     const init = {};
     props.forEach(p => {
       const raw = item._raw?.[p.name];
-      // extractAnyProp returns the parsed value; fall back to "" so inputs are always controlled
       init[p.name] = raw !== undefined ? (extractAnyProp(raw) ?? "") : "";
     });
     return init;
   }
 
-  function setDyn(name, val) { setDynValues(prev => ({ ...prev, [name]: val })); }
-  function toggleTool(t)     { setTools(prev    => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; }); }
-  function toggleFeature(f)  { setFeatures(prev => { const n = new Set(prev); n.has(f) ? n.delete(f) : n.add(f); return n; }); }
+  function setDyn(name, val)         { setDynValues(prev  => ({ ...prev, [name]: val })); }
+  function setDynFile(name, fileObj) { setDynFileObjs(prev => ({ ...prev, [name]: fileObj })); }
+  function toggleTool(t)    { setTools(prev    => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n; }); }
+  function toggleFeature(f) { setFeatures(prev => { const n = new Set(prev); n.has(f) ? n.delete(f) : n.add(f); return n; }); }
 
   function handleSubmit() {
-    onSubmit({ title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues });
+    onSubmit({ title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues, dynFileObjs });
   }
 
   const isEdit = mode === "edit";
@@ -215,7 +363,6 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
 
-      {/* ── Core fields ── */}
       <div style={{ marginBottom: 16 }}>
         <div style={sectionLabel}>Service details</div>
         <Field label="Title" required>
@@ -236,19 +383,16 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
 
       <div style={divider} />
 
-      {/* ── Tools ── */}
       <div style={{ marginBottom: 14 }}>
         <div style={sectionLabel}>Tools</div>
         <PillToggle options={TOOLS_OPTIONS} selected={[...tools]} onToggle={toggleTool} />
       </div>
 
-      {/* ── Features ── */}
       <div style={{ marginBottom: 16 }}>
         <div style={sectionLabel}>Features</div>
         <PillToggle options={FEATURES_OPTIONS} selected={[...features]} onToggle={toggleFeature} activeColor="#a78bfa" activeBg="rgba(167,139,250,0.1)" />
       </div>
 
-      {/* ── Dynamic extra properties ── */}
       {extraProps.length > 0 && (
         <>
           <div style={divider} />
@@ -263,6 +407,7 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
                   prop={p}
                   value={dynValues[p.name]}
                   onChange={val => setDyn(p.name, val)}
+                  onFileChange={(name, file) => setDynFile(name, file)}
                 />
               ))}
             </div>
@@ -272,7 +417,6 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
 
       <div style={divider} />
 
-      {/* ── Logo upload ── */}
       <div style={{ marginBottom: 16 }}>
         <div style={sectionLabel}>Logo / Icon</div>
         <UploadZone
@@ -305,6 +449,7 @@ export function ServiceForm({ mode = "create", initial = {}, dbProps = [], onSub
   );
 }
 
+
 // ── View / Edit Modal ─────────────────────────────────────────────
 export default function EditModal({ item, dbProps, onClose, onDelete, onSave, editSubmitting, editResult }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -315,10 +460,9 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
     return () => window.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // Reset edit mode when a different item is opened
   useEffect(() => { setIsEditing(false); }, [item.id]);
 
-  const ss = statusStyle(item.status);
+  const ss         = statusStyle(item.status);
   const extraProps = dbProps.filter(p => !CORE_PROP_NAMES.has(p.name) && p.type !== "title");
 
   return (
@@ -327,7 +471,6 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
       <div style={{ position: "relative", background: T.navyCard, border: `1px solid ${T.borderStrong}`, borderRadius: 16, width: "100%", maxWidth: 600, zIndex: 1, animation: "modalIn 0.2s ease", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <style>{`@keyframes modalIn { from { opacity:0; transform:translateY(-12px) } to { opacity:1; transform:translateY(0) } }`}</style>
 
-        {/* ── Sticky header ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `1px solid ${T.border}`, background: T.navyDeep, borderRadius: "16px 16px 0 0", flexShrink: 0 }}>
           <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: T.textPrimary, display: "flex", alignItems: "center", gap: 10 }}>
             {item.logo && <img src={item.logo} alt="" style={{ width: 26, height: 26, objectFit: "contain", borderRadius: 4 }} />}
@@ -355,14 +498,12 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
           </div>
         </div>
 
-        {/* ── Scrollable body ── */}
         <div style={{ overflowY: "auto", flex: 1, padding: "18px 20px 22px" }}>
 
           {/* ════ VIEW MODE ════ */}
           {!isEditing && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
-              {/* Hero: logo + status */}
               <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: T.blueDim, borderRadius: 10, border: `1px solid ${T.border}` }}>
                 {item.logo
                   ? <img src={item.logo} alt={item.title} style={{ width: 52, height: 52, objectFit: "contain", borderRadius: 8, background: "rgba(0,0,0,0.3)", border: `1px solid ${T.borderStrong}`, padding: 4 }} />
@@ -379,7 +520,6 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
                 )}
               </div>
 
-              {/* Description */}
               {item.serviceDescription && (
                 <div>
                   <div style={sectionLabel}>Description</div>
@@ -389,7 +529,6 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
                 </div>
               )}
 
-              {/* Tools */}
               {item.tools?.length > 0 && (
                 <div>
                   <div style={sectionLabel}>Tools</div>
@@ -401,7 +540,6 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
                 </div>
               )}
 
-              {/* Features */}
               {item.features?.length > 0 && (
                 <div>
                   <div style={sectionLabel}>Features</div>
@@ -415,7 +553,6 @@ export default function EditModal({ item, dbProps, onClose, onDelete, onSave, ed
                 </div>
               )}
 
-              {/* Dynamic extra properties — view mode */}
               {extraProps.length > 0 && (
                 <div>
                   <div style={divider} />

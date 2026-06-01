@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { T, inputStyle } from "./constants";
+import { useState, useRef, useEffect } from "react";
+import { T, inputStyle, CATEGORIES, STATUSES, TOOLS_LIST } from "./constants";
 import { statusStyle } from "./helper";
 
 // ── Field wrapper ─────────────────────────────────────────────────
@@ -136,9 +136,9 @@ export function DeleteModal({ item, onConfirm, onCancel, loading }) {
       <div onClick={onCancel} style={{ position: "absolute", inset: 0, background: "rgba(0,7,20,0.85)", backdropFilter: "blur(2px)" }} />
       <div style={{ position: "relative", background: T.navyCard, border: `1px solid ${T.borderStrong}`, borderRadius: 14, padding: "28px 28px 24px", width: 380, zIndex: 1 }}>
         <div style={{ fontSize: 32, textAlign: "center", marginBottom: 12 }}>🗑️</div>
-        <h3 style={{ fontSize: 16, fontWeight: 600, color: T.textPrimary, textAlign: "center", margin: "0 0 8px" }}>Delete service?</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: T.textPrimary, textAlign: "center", margin: "0 0 8px" }}>Delete item?</h3>
         <p style={{ fontSize: 13, color: T.textSecond, textAlign: "center", margin: "0 0 20px", lineHeight: 1.5 }}>
-          This will permanently remove <strong style={{ color: T.textPrimary }}>{item?.title || "this service"}</strong>. This cannot be undone.
+          This will permanently remove <strong style={{ color: T.textPrimary }}>{item?.title || item?.displayName || "this item"}</strong>. This cannot be undone.
         </p>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={onCancel} style={{ flex: 1, padding: "9px 0", border: `1px solid ${T.borderStrong}`, borderRadius: 8, background: "transparent", color: T.textSecond, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>Cancel</button>
@@ -148,5 +148,170 @@ export function DeleteModal({ item, onConfirm, onCancel, loading }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ── Testimonial-specific primitives (added) ───────────────────────
+// ─────────────────────────────────────────────────────────────────
+
+// ── Avatar ────────────────────────────────────────────────────────
+export function Avatar({ name, src, size = 32 }) {
+  return src
+    ? <img src={src} alt={name} style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.borderStrong}`, flexShrink: 0 }} />
+    : <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(59,130,246,0.2)", border: `1px solid ${T.borderStrong}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: size * 0.38, fontWeight: 600, color: "#7eb3fa", flexShrink: 0 }}>
+        {name?.[0]?.toUpperCase() ?? "?"}
+      </div>;
+}
+
+// ── StarRating ────────────────────────────────────────────────────
+export function StarRating({ value, onChange }) {
+  const [hovered, setHovered] = useState(0);
+  return (
+    <div style={{ display: "flex", gap: 3 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span key={n}
+          onClick={() => onChange && onChange(n === value ? 0 : n)}
+          onMouseEnter={() => onChange && setHovered(n)}
+          onMouseLeave={() => onChange && setHovered(0)}
+          style={{ fontSize: onChange ? 26 : 13, cursor: onChange ? "pointer" : "default", color: n <= (hovered || value) ? "#f59e0b" : "#1e3a6e", transition: "color 0.1s", userSelect: "none" }}>
+          ★
+        </span>
+      ))}
+      {value > 0 && onChange && (
+        <span style={{ fontSize: 11, color: T.textMuted, alignSelf: "center", marginLeft: 4 }}>{value}/5</span>
+      )}
+    </div>
+  );
+}
+
+// ── ClientCard ────────────────────────────────────────────────────
+export function ClientCard({ client, onClear }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 9, marginTop: 6 }}>
+      <Avatar name={client.name} src={client.avatar} size={36} />
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontWeight: 600, fontSize: 13, color: T.textPrimary }}>{client.name}</p>
+        <p style={{ margin: 0, fontSize: 11, color: T.textMuted }}>{[client.role, client.company].filter(Boolean).join(" · ")}</p>
+      </div>
+      <button onClick={onClear} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 17, color: T.textMuted }}>×</button>
+    </div>
+  );
+}
+
+// ── ContractTitleField ────────────────────────────────────────────
+export function ContractTitleField({ clientContractTitle, value, onChange }) {
+  const [useCustom, setUseCustom] = useState(false);
+  useEffect(() => setUseCustom(false), [clientContractTitle]);
+
+  if (!clientContractTitle) {
+    return <input style={inputStyle} value={value} onChange={e => onChange(e.target.value)} placeholder="e.g. 60 minute consultation" />;
+  }
+  if (useCustom) {
+    return (
+      <div style={{ display: "flex", gap: 5 }}>
+        <input style={{ ...inputStyle, flex: 1 }} value={value} onChange={e => onChange(e.target.value)} placeholder="Custom contract title…" autoFocus />
+        <button onClick={() => { setUseCustom(false); onChange(clientContractTitle); }}
+          style={{ padding: "7px 9px", fontSize: 11, border: `1px solid ${T.borderStrong}`, borderRadius: 7, background: "#0a1f4a", color: T.textSecond, cursor: "pointer", whiteSpace: "nowrap" }}>
+          ← Use client's
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <select style={inputStyle} value={value}
+        onChange={e => { if (e.target.value === "__custom__") { setUseCustom(true); onChange(""); } else onChange(e.target.value); }}>
+        <option value={clientContractTitle}>{clientContractTitle}</option>
+        <option value="__custom__">Custom…</option>
+      </select>
+      <p style={{ fontSize: 10, color: T.textMuted, marginTop: 2 }}>Auto-filled · choose "Custom…" to override</p>
+    </div>
+  );
+}
+
+// ── DynamicField — editable input per Notion property type ────────
+export function DynamicField({ prop, value, onChange }) {
+  const { name, type, options: propOptions = [] } = prop;
+
+  if (type === "multi_select") {
+    const available = propOptions.map(o => o.name);
+    const selected  = Array.isArray(value) ? value : [];
+    return (
+      <Field label={name}>
+        {available.length > 0 ? (
+          <PillToggle options={available} selected={selected}
+            onToggle={opt => { const next = selected.includes(opt) ? selected.filter(v => v !== opt) : [...selected, opt]; onChange(next); }}
+            activeColor="#a78bfa" activeBg="rgba(167,139,250,0.1)" />
+        ) : (
+          <input style={inputStyle} value={selected.join(", ")}
+            onChange={e => onChange(e.target.value.split(",").map(s => s.trim()).filter(Boolean))}
+            placeholder="comma-separated values…" />
+        )}
+      </Field>
+    );
+  }
+  if (type === "select") {
+    const available = propOptions.map(o => o.name);
+    return (
+      <Field label={name}>
+        <select style={{ ...inputStyle, cursor: "pointer" }} value={value || ""} onChange={e => onChange(e.target.value)}>
+          <option value="">— none —</option>
+          {available.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+      </Field>
+    );
+  }
+  if (type === "checkbox") {
+    return (
+      <Field label={name}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          <input type="checkbox" checked={!!value} onChange={e => onChange(e.target.checked)}
+            style={{ width: 15, height: 15, accentColor: T.blue, cursor: "pointer" }} />
+          <span style={{ fontSize: 12, color: T.textSecond }}>{value ? "Enabled" : "Disabled"}</span>
+        </label>
+      </Field>
+    );
+  }
+  if (type === "number") {
+    return (
+      <Field label={name}>
+        <input type="number" style={inputStyle} value={value ?? ""}
+          onChange={e => onChange(e.target.value === "" ? null : Number(e.target.value))} placeholder="0" />
+      </Field>
+    );
+  }
+  if (type === "date") {
+    return (
+      <Field label={name}>
+        <input type="date" style={{ ...inputStyle, colorScheme: "dark" }} value={value || ""} onChange={e => onChange(e.target.value)} />
+      </Field>
+    );
+  }
+  if (type === "url") {
+    return (
+      <Field label={name}>
+        <input type="url" style={inputStyle} value={value || ""} onChange={e => onChange(e.target.value)} placeholder="https://…" />
+      </Field>
+    );
+  }
+  if (type === "email") {
+    return (
+      <Field label={name}>
+        <input type="email" style={inputStyle} value={value || ""} onChange={e => onChange(e.target.value)} placeholder="name@example.com" />
+      </Field>
+    );
+  }
+  if (type === "phone_number") {
+    return (
+      <Field label={name}>
+        <input type="tel" style={inputStyle} value={value || ""} onChange={e => onChange(e.target.value)} placeholder="+1 (555) 000-0000" />
+      </Field>
+    );
+  }
+  return (
+    <Field label={name}>
+      <input style={inputStyle} value={value || ""} onChange={e => onChange(e.target.value)} placeholder={`Enter ${name.toLowerCase()}…`} />
+    </Field>
   );
 }

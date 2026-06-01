@@ -1,4 +1,4 @@
-export const BASE_URL   = import.meta.env.VITE_API_URL;
+export const BASE_URL   = import.meta.env.VITE_ADMIN_API;
 export const ADMIN_KEY  = import.meta.env.VITE_API_CLIENT_KEY;
 export const PUBLIC_KEY = import.meta.env.VITE_API_SECRET;
 
@@ -20,6 +20,7 @@ export const T = {
   greenBorder: "rgba(34,197,94,0.3)",
 };
 
+// ── Services options ──────────────────────────────────────────────
 export const TOOLS_OPTIONS = [
   "Notion","Notion API","Automation","Zapier","Make","Airtable",
   "Go High Level","Google App Script","CRM","Slack","React",
@@ -34,6 +35,23 @@ export const FEATURES_OPTIONS = [
   "Multi-workspace setup","Permission management",
 ];
 
+// ── Testimonial options ───────────────────────────────────────────
+export const CATEGORIES = [
+  "Notion x Automation","Notion Setup","Google App Script",
+  "Consultation","Website Development","Automation",
+];
+
+export const TOOLS_LIST = [
+  "Notion","Automation","Google App Script","Zapier","Make",
+  "Airtable","Go High Level","CRM","Slack","React","TailwindCSS",
+];
+
+export const STATUSES = [
+  "To Gather Data","Screenshot Editing","Data Gathering",
+  "Screenshot Edited","Approved",
+];
+
+// ── Shared ────────────────────────────────────────────────────────
 export const PROPERTY_TYPES = [
   { value: "rich_text",    label: "Text" },
   { value: "number",       label: "Number" },
@@ -66,7 +84,13 @@ export const STATUS_COLORS = {
 };
 
 export const CORE_PROP_NAMES = new Set([
+  // Services core
   "Title","Service Header","Service Description","Logo","Tools","Features","Status",
+  // Testimonials core
+  "Feedback ","Feedback","Client","Contract Title","Project Title",
+  "Category","Rate","Status","Tools","Credibility link",
+  "Feedback Screenshot","Raw Screenshot","Client Profile",
+  "Display Name","Company","Client Role","Reviewer Role",
 ]);
 
 export const inputStyle = {

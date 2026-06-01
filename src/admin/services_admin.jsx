@@ -95,62 +95,98 @@ export default function ServicesDashboard() {
   }
 
   // ── Create ────────────────────────────────────────────────────
-  async function handleCreate({ title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues }) {
+  async function handleCreate({ title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues, dynFileObjs }) {
     setCreateResult(null);
-    if (!title.trim()) return setCreateResult({ type:"error", msg:"Title is required." });
+    if (!title.trim()) return setCreateResult({ type: "error", msg: "Title is required." });
     setSubmitting(true);
     try {
+      // Upload logo
       let logoFileId = null;
       if (logoFile) logoFileId = await uploadFile(logoFile);
+  
+      // Upload any dynamic file props and inject their fileIds into dynValues
+      const resolvedDynValues = { ...dynValues };
+      if (dynFileObjs && Object.keys(dynFileObjs).length > 0) {
+        await Promise.all(
+          Object.entries(dynFileObjs).map(async ([propName, file]) => {
+            if (!file) return;
+            const fileId = await uploadFile(file);
+            resolvedDynValues[propName] = fileId; // backend will handle file_upload type
+          })
+        );
+      }
+  
       const payload = {
         title:              title.trim(),
         ...(serviceHeader      && { serviceHeader:      serviceHeader.trim()      }),
         ...(serviceDescription && { serviceDescription: serviceDescription.trim() }),
-        ...(tools.size         && { tools:   [...tools]                           }),
-        ...(features.size      && { features:[...features]                        }),
+        ...(tools.size         && { tools:    [...tools]                          }),
+        ...(features.size      && { features: [...features]                       }),
         ...(logoFileId         && { logoFileId                                    }),
-        ...(dynValues          && { dynValues                                     }),
+        ...(Object.keys(resolvedDynValues).length && { dynValues: resolvedDynValues }),
       };
+  
       const res  = await fetch(`${BASE_URL}/admin/services`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json", "x-api-key":ADMIN_KEY },
-        body:JSON.stringify(payload),
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": ADMIN_KEY },
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Something went wrong.");
-      setCreateResult({ type:"success", msg:`✓ Created! ID: ${data.id}` });
+      setCreateResult({ type: "success", msg: `✓ Created! ID: ${data.id}` });
       setTimeout(() => { setShowCreate(false); setCreateResult(null); }, 1400);
       fetchServices();
-    } catch (err) { setCreateResult({ type:"error", msg:err.message }); }
-    finally { setSubmitting(false); }
+    } catch (err) {
+      setCreateResult({ type: "error", msg: err.message });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   // ── Edit / update ─────────────────────────────────────────────
-  async function handleEdit(id, { title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues }) {
+  async function handleEdit(id, { title, serviceHeader, serviceDescription, tools, features, logoFile, dynValues, dynFileObjs }) {
     setEditResult(null); setEditSubmitting(true);
     try {
+      // Upload logo
       let logoFileId = null;
       if (logoFile) logoFileId = await uploadFile(logoFile);
+  
+      // Upload any dynamic file props
+      const resolvedDynValues = { ...dynValues };
+      if (dynFileObjs && Object.keys(dynFileObjs).length > 0) {
+        await Promise.all(
+          Object.entries(dynFileObjs).map(async ([propName, file]) => {
+            if (!file) return;
+            const fileId = await uploadFile(file);
+            resolvedDynValues[propName] = fileId;
+          })
+        );
+      }
+  
       const payload = {
         ...(title              && { title:              title.trim()              }),
         ...(serviceHeader      !== undefined && { serviceHeader:      serviceHeader.trim()      }),
         ...(serviceDescription !== undefined && { serviceDescription: serviceDescription.trim() }),
         tools:    [...tools],
         features: [...features],
-        ...(logoFileId         && { logoFileId                                    }),
-        ...(dynValues          && { dynValues                                     }),
+        ...(logoFileId && { logoFileId }),
+        ...(Object.keys(resolvedDynValues).length && { dynValues: resolvedDynValues }),
       };
+  
       const res  = await fetch(`${BASE_URL}/admin/services/${id}`, {
-        method:"PATCH",
-        headers:{ "Content-Type":"application/json", "x-api-key":ADMIN_KEY },
-        body:JSON.stringify(payload),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-api-key": ADMIN_KEY },
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Update failed.");
-      setEditResult({ type:"success", msg:"✓ Saved!" });
+      setEditResult({ type: "success", msg: "✓ Saved!" });
       setTimeout(() => { setEditResult(null); setViewItem(null); fetchServices(); }, 900);
-    } catch (err) { setEditResult({ type:"error", msg:err.message }); }
-    finally { setEditSubmitting(false); }
+    } catch (err) {
+      setEditResult({ type: "error", msg: err.message });
+    } finally {
+      setEditSubmitting(false);
+    }
   }
 
   // ── Delete ────────────────────────────────────────────────────
