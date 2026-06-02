@@ -161,27 +161,35 @@ export default function TestimonialsDashboard() {
 
   // ── Create ────────────────────────────────────────────────────
   async function handleCreate({ feedback, contractTitle, projectTitle, category, credLink, rating, status, tools, selectedClient, screenshotFile, rawFile, dynValues }) {
-    setCreateResult(null);
-    if (!feedback.trim())  return setCreateResult({ type:"error", msg:"Feedback text is required." });
-    if (!selectedClient)   return setCreateResult({ type:"error", msg:"Please select a client." });
-    setSubmitting(true);
-    try {
-      let screenshotFileId = null, rawFileId = null;
-      if (screenshotFile) screenshotFileId = await uploadFile(screenshotFile);
-      if (rawFile)        rawFileId        = await uploadFile(rawFile);
-      const payload = {
-        feedback: feedback.trim(), clientId: selectedClient.id,
-        ...(contractTitle    && { contractTitle:   contractTitle.trim()   }),
-        ...(projectTitle     && { projectTitle:    projectTitle.trim()    }),
-        ...(category         && { category                                }),
-        ...(credLink         && { credibilityLink: credLink.trim()        }),
-        ...(rating           && { rate:            rating                 }),
-        ...(status           && { status                                  }),
-        ...(tools.size       && { tools:           [...tools]             }),
-        ...(screenshotFileId && { screenshotFileId                        }),
-        ...(rawFileId        && { rawFileId                               }),
-        ...(dynValues        && { dynValues                               }),
-      };
+  setCreateResult(null);
+  if (!feedback.trim())  return setCreateResult({ type:"error", msg:"Feedback text is required." });
+  if (!selectedClient)   return setCreateResult({ type:"error", msg:"Please select a client." });
+  setSubmitting(true);
+  try {
+    let screenshotFileId = null, rawFileId = null;
+    if (screenshotFile) screenshotFileId = await uploadFile(screenshotFile);
+    if (rawFile)        rawFileId        = await uploadFile(rawFile);
+
+    // ── Upload any File objects inside dynValues ──────────────
+    const resolvedDynValues = {};
+    for (const [key, val] of Object.entries(dynValues ?? {})) {
+      resolvedDynValues[key] = val instanceof File ? await uploadFile(val) : val;
+    }
+    // ─────────────────────────────────────────────────────────
+
+    const payload = {
+      feedback: feedback.trim(), clientId: selectedClient.id,
+      ...(contractTitle    && { contractTitle:   contractTitle.trim()   }),
+      ...(projectTitle     && { projectTitle:    projectTitle.trim()    }),
+      ...(category         && { category                                }),
+      ...(credLink         && { credibilityLink: credLink.trim()        }),
+      ...(rating           && { rate:            rating                 }),
+      ...(status           && { status                                  }),
+      ...(tools.size       && { tools:           [...tools]             }),
+      ...(screenshotFileId && { screenshotFileId                        }),
+      ...(rawFileId        && { rawFileId                               }),
+      dynValues: resolvedDynValues,  // ← always send, always resolved
+    };
       const res  = await fetch(`${BASE_URL}/admin/testimonials`, {
         method:"POST", headers:{ "Content-Type":"application/json", "x-api-key": ADMIN_KEY },
         body: JSON.stringify(payload),
@@ -195,13 +203,25 @@ export default function TestimonialsDashboard() {
     finally { setSubmitting(false); }
   }
 
-  // ── Edit ──────────────────────────────────────────────────────
+  // ── Edit ──────────────────────────────────────────────────────────
   async function handleEdit(id, { feedback, contractTitle, projectTitle, category, credLink, rating, status, tools, screenshotFile, rawFile, deleteFeedbackSs, deleteRawSs, dynValues }) {
     setEditResult(null); setEditSubmitting(true);
     try {
       let screenshotFileId = null, rawFileId = null;
       if (screenshotFile) screenshotFileId = await uploadFile(screenshotFile);
       if (rawFile)        rawFileId        = await uploadFile(rawFile);
+
+      // ── Upload any File objects inside dynValues ──────────────────
+      const resolvedDynValues = {};
+      for (const [key, val] of Object.entries(dynValues ?? {})) {
+        if (val instanceof File) {
+          resolvedDynValues[key] = await uploadFile(val); // → fileId string
+        } else {
+          resolvedDynValues[key] = val;
+        }
+      }
+      // ─────────────────────────────────────────────────────────────
+
       const payload = {
         feedback: feedback.trim(),
         ...(contractTitle !== undefined && { contractTitle: contractTitle.trim()   }),
@@ -215,8 +235,9 @@ export default function TestimonialsDashboard() {
         ...(rawFileId        && { rawFileId                                        }),
         ...(deleteFeedbackSs && { deleteFeedbackSs: true                           }),
         ...(deleteRawSs      && { deleteRawSs:      true                           }),
-        ...(dynValues        && { dynValues                                        }),
+        dynValues: resolvedDynValues,   // ← resolved, no raw File objects
       };
+
       const res  = await fetch(`${BASE_URL}/admin/testimonials/${id}`, {
         method:"PATCH", headers:{ "Content-Type":"application/json", "x-api-key": ADMIN_KEY },
         body: JSON.stringify(payload),
@@ -263,7 +284,11 @@ export default function TestimonialsDashboard() {
   ];
 
   const dynamicCols = dbProps
-    .filter(p => !CORE_PROP_NAMES.has(p.name) && p.type !== "title")
+  .filter(p =>
+    !CORE_PROP_NAMES.has(p.name) &&
+    p.type !== "title" &&
+    !p.name.includes("(from client)")
+  )
     .map(p => ({ key:`_dyn_${p.name}`, label:p.name, w:160, type:p.type, propName:p.name }));
 
   const ALL_COLS   = [...CORE_COLS, ...dynamicCols];

@@ -13,7 +13,7 @@ const COLORS = [
   "#1a5fc0",
 ];
 
-const API_BASE =  import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL;
 const API_KEY = import.meta.env.VITE_API_SECRET;
 const PAGE_SIZE = 6;
 
@@ -105,11 +105,8 @@ function getServiceType(tools) {
   return { label: tools[0], isAutomation: false };
 }
 
-function getClientInfoLine(role, company) {
-  const r = role?.trim(),
-    c = company?.trim();
-  if (r && c) return `${r}, ${c}`;
-  return r || c || "";
+function getClientInfoLine(company) {
+  return company?.trim() || "";
 }
 
 /* ── Zoomable Image ───────────────────────────────────────────── */
@@ -184,7 +181,6 @@ function ZoomableImage({ src, alt, style, onError }) {
     }
   };
 
-  // Touch pinch-to-zoom support
   const lastTouchDist = useRef(null);
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
@@ -209,7 +205,6 @@ function ZoomableImage({ src, alt, style, onError }) {
 
   return (
     <>
-      {/* Thumbnail — small, clickable to zoom */}
       <div
         style={{
           position: "relative",
@@ -232,7 +227,6 @@ function ZoomableImage({ src, alt, style, onError }) {
           onClick={openZoom}
           title="Click to zoom"
         />
-        {/* Zoom hint badge */}
         <div
           style={{
             position: "absolute",
@@ -276,7 +270,6 @@ function ZoomableImage({ src, alt, style, onError }) {
         </div>
       </div>
 
-      {/* Zoom Lightbox */}
       {zoomed && (
         <div
           style={{
@@ -292,7 +285,6 @@ function ZoomableImage({ src, alt, style, onError }) {
           }}
           onClick={closeZoom}
         >
-          {/* Top bar */}
           <div
             style={{
               position: "absolute",
@@ -341,7 +333,6 @@ function ZoomableImage({ src, alt, style, onError }) {
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {/* Zoom out */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -375,7 +366,6 @@ function ZoomableImage({ src, alt, style, onError }) {
                   <line x1="8" y1="11" x2="14" y2="11" />
                 </svg>
               </button>
-              {/* Zoom in */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -409,7 +399,6 @@ function ZoomableImage({ src, alt, style, onError }) {
                   <line x1="8" y1="11" x2="14" y2="11" />
                 </svg>
               </button>
-              {/* Reset */}
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -434,7 +423,6 @@ function ZoomableImage({ src, alt, style, onError }) {
               >
                 1:1
               </button>
-              {/* Close */}
               <button
                 onClick={closeZoom}
                 style={{
@@ -457,7 +445,6 @@ function ZoomableImage({ src, alt, style, onError }) {
             </div>
           </div>
 
-          {/* Hint */}
           <div
             style={{
               position: "absolute",
@@ -480,7 +467,6 @@ function ZoomableImage({ src, alt, style, onError }) {
             scroll to zoom · drag to pan · double-click to toggle · esc to close
           </div>
 
-          {/* Image container */}
           <div
             style={{
               overflow: "hidden",
@@ -527,7 +513,7 @@ function ZoomableImage({ src, alt, style, onError }) {
   );
 }
 
-/* ── Testimonial Card — full feedback, View more bottom right ─── */
+/* ── Testimonial Card ─────────────────────────────────────────── */
 function TestimonialCard({ t, i, onClick }) {
   const initials = (t.displayName || "??")
     .split(" ")
@@ -536,14 +522,13 @@ function TestimonialCard({ t, i, onClick }) {
     .slice(0, 2)
     .toUpperCase();
   const serviceType = getServiceType(t.tools);
-  const clientInfo = getClientInfoLine(t.clientRole, t.company);
+  const clientInfo = getClientInfoLine(t.company);
 
   return (
     <div
       className="card-glass p-6 flex flex-col gap-3 cursor-pointer hover:border-brand-500/40 transition-all duration-200 h-full"
       onClick={() => onClick(t)}
     >
-      {/* Top: stars + tag */}
       <div className="flex items-start justify-between flex-shrink-0">
         <Stars n={t.rate} />
         {serviceType && (
@@ -551,14 +536,12 @@ function TestimonialCard({ t, i, onClick }) {
         )}
       </div>
 
-      {/* Feedback — full text displayed */}
       <div className="flex-1">
         <p className="text-blue-100/80 text-[13px] leading-relaxed">
           {t.feedback}
         </p>
       </div>
 
-      {/* Footer: client details (left) + View more (right) */}
       <div className="flex items-center justify-between pt-3 border-t border-white/[0.05] flex-shrink-0 mt-auto gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <Avatar
@@ -593,7 +576,7 @@ function Modal({ t, onClose, isDark }) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-  const clientInfo = getClientInfoLine(t.clientRole, t.company);
+  const clientInfo = getClientInfoLine(t.company);
 
   useEffect(() => {
     const handler = (e) => {
@@ -777,7 +760,6 @@ function Modal({ t, onClose, isDark }) {
           </div>
         )}
 
-        {/* ── Upwork Feedback — now zoomable ── */}
         {t.feedbackScreenshot && (
           <div style={{ marginBottom: "18px" }}>
             <p
@@ -911,7 +893,7 @@ function shuffleArray(array) {
   return newArray;
 }
 
-/* ── 3-Row Responsive Carousel (1 mobile, 2 tablet, 3 desktop) ─ */
+/* ── Carousel ─────────────────────────────────────────────────── */
 function ReviewsCarousel({ testimonials, onOpen }) {
   const rows = [[], [], []];
   testimonials.forEach((t, i) => {
@@ -949,7 +931,7 @@ function ReviewsCarousel({ testimonials, onOpen }) {
     }
     .carousel-card {
       width: 400px;
-      height : 370px;
+      height: 370px;
       flex-shrink: 0;
     }
     @media (max-width: 640px) {
@@ -958,20 +940,20 @@ function ReviewsCarousel({ testimonials, onOpen }) {
       }
     }
     .mask-fade-container {
-      mask-image: linear-gradient(to right, 
-        transparent 0%, 
-        rgba(0,0,0,0.1) 5%, 
-        rgba(0,0,0,1) 15%, 
-        rgba(0,0,0,1) 85%, 
-        rgba(0,0,0,0.1) 95%, 
+      mask-image: linear-gradient(to right,
+        transparent 0%,
+        rgba(0,0,0,0.1) 5%,
+        rgba(0,0,0,1) 15%,
+        rgba(0,0,0,1) 85%,
+        rgba(0,0,0,0.1) 95%,
         transparent 100%
       );
-      -webkit-mask-image: linear-gradient(to right, 
-        transparent 0%, 
-        rgba(0,0,0,0.1) 5%, 
-        rgba(0,0,0,1) 15%, 
-        rgba(0,0,0,1) 85%, 
-        rgba(0,0,0,0.1) 95%, 
+      -webkit-mask-image: linear-gradient(to right,
+        transparent 0%,
+        rgba(0,0,0,0.1) 5%,
+        rgba(0,0,0,1) 15%,
+        rgba(0,0,0,1) 85%,
+        rgba(0,0,0,0.1) 95%,
         transparent 100%
       );
     }
@@ -1050,8 +1032,10 @@ export default function Testimonials() {
         }
       })
       .then((res) => {
-        if (res?.success) setTestimonials(res.data);
-        writeCache(res.data);
+        if (res?.success && Array.isArray(res.data)) {
+          setTestimonials(res.data);
+          writeCache(res.data);
+        }
       })
       .catch((err) => console.error("Fetch error:", err))
       .finally(() => setLoading(false));
@@ -1095,7 +1079,7 @@ export default function Testimonials() {
         </div>
       </section>
 
-      {/* Featured carousel */}
+      {/* Featured */}
       {!loading && featured && (
         <section className="py-16 bg-navy-900/30 border-b border-white/[0.05]">
           <div className="max-w-4xl mx-auto px-5 md:px-8">
@@ -1131,10 +1115,7 @@ export default function Testimonials() {
                       {featured.displayName}
                     </p>
                     {(() => {
-                      const info = getClientInfoLine(
-                        featured.clientRole,
-                        featured.company,
-                      );
+                      const info = getClientInfoLine(featured.company);
                       return info ? (
                         <p className="text-blue-300/60 text-sm">{info}</p>
                       ) : null;
@@ -1166,7 +1147,7 @@ export default function Testimonials() {
         </section>
       )}
 
-      {/* All reviews — 70% width, randomized, responsive rows */}
+      {/* All reviews */}
       <section className="py-16">
         <div className="max-w-7xl mx-auto px-5 md:px-8 mb-10">
           <h2 className="section-title text-white text-2xl">All Reviews</h2>

@@ -25,6 +25,15 @@ const sectionLabel = {
 };
 const divider = { height:1, background:"rgba(59,130,246,0.18)", margin:"16px 0" };
 
+// ── Extra props filter (shared) ───────────────────────────────────
+function getExtraProps(dbProps) {
+  return dbProps.filter(p =>
+    !CORE_PROP_NAMES.has(p.name) &&
+    p.type !== "title" &&
+    !p.name.includes("(from client")
+  );
+}
+
 function resolveRole(item) {
   return item.reviewerRole || item.role || item["Reviewer Role"] || item.clientRole || item.client_role || "";
 }
@@ -46,6 +55,97 @@ function resolveScreenshot(val) {
   return null;
 }
 
+// ── Reusable files property upload field ──────────────────────────
+function FilePropField({ name, value, onChange }) {
+  const currentUrl  = typeof value === "string" && value.startsWith("http") ? value : null;
+  const pendingFile = value instanceof File ? value : null;
+
+  // ── Generate preview URL for image files ─────────────────────
+  const previewUrl = pendingFile?.type?.startsWith("image/")
+    ? URL.createObjectURL(pendingFile)
+    : null;
+
+  return (
+    <Field label={name}>
+      {/* Current file — show thumbnail if it looks like an image */}
+      {currentUrl && !pendingFile && (
+        <div style={{ marginBottom:8 }}>
+          {/\.(jpg|jpeg|png|webp|gif|svg)(\?|$)/i.test(currentUrl) ? (
+            <img src={currentUrl} alt={name}
+              style={{ width:"100%", maxHeight:120, objectFit:"cover", borderRadius:7, border:`1px solid ${T.borderStrong}`, marginBottom:6, display:"block" }} />
+          ) : null}
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <a href={currentUrl} target="_blank" rel="noreferrer"
+              style={{ fontSize:11, color:T.blue, wordBreak:"break-all", flex:1 }}>
+              📎 Current file
+            </a>
+            <button onClick={() => onChange(null)}
+              style={{ fontSize:11, color:"#f87171", background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:6, padding:"3px 9px", cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+              🗑️ Remove
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upload zone — passes previewUrl so image shows immediately */}
+      <UploadZone
+        label={pendingFile ? "Replace file" : `Upload ${name}`}
+        hint="Image, PDF, Office · Max 5 MB"
+        emoji="📎"
+        preview={previewUrl}
+        onChange={f => onChange(f)}
+      />
+
+      {/* Pending non-image file confirmation */}
+      {pendingFile && !previewUrl && (
+        <div style={{ marginTop:6, padding:"7px 10px", borderRadius:7, background:"rgba(34,197,94,0.08)", border:"1px solid rgba(34,197,94,0.25)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <span style={{ fontSize:11, color:"#4ade80" }}>
+            ✓ {pendingFile.name} ({(pendingFile.size / 1024).toFixed(0)} KB)
+          </span>
+          <button onClick={() => onChange(currentUrl ?? null)}
+            style={{ fontSize:11, color:T.textMuted, background:"none", border:"none", cursor:"pointer", fontFamily:"inherit" }}>
+            × Clear
+          </button>
+        </div>
+      )}
+
+      {/* Clear button when image preview is shown */}
+      {pendingFile && previewUrl && (
+        <button onClick={() => onChange(currentUrl ?? null)}
+          style={{ marginTop:4, fontSize:11, color:T.textMuted, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit" }}>
+          × Clear new upload
+        </button>
+      )}
+    </Field>
+  );
+}
+
+// ── Dynamic extra props renderer (handles files inline) ───────────
+function ExtraPropsFields({ extraProps, dynValues, setDyn }) {
+  if (!extraProps.length) return null;
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 16px" }}>
+      {extraProps.map(p =>
+        p.type === "files" ? (
+          <FilePropField
+            key={p.name}
+            name={p.name}
+            value={dynValues[p.name]}
+            onChange={val => setDyn(p.name, val)}
+          />
+        ) : (
+          <DynamicField
+            key={p.name}
+            prop={p}
+            value={dynValues[p.name]}
+            onChange={val => setDyn(p.name, val)}
+          />
+        )
+      )}
+    </div>
+  );
+}
+
 // ── TestimonialForm (create mode) ────────────────────────────────
 export function TestimonialForm({ mode, initial, dbProps = [], clients, clientsLoading, clientsError, onRetryClients, onSubmit, onCancel, submitting, result }) {
   const [feedback, setFeedback]                   = useState(initial?.feedback        || "");
@@ -63,9 +163,9 @@ export function TestimonialForm({ mode, initial, dbProps = [], clients, clientsL
   const [rawFile, setRawFile]                     = useState(null);
   const [rawPreview, setRawPreview]               = useState(null);
 
-  const extraProps = dbProps.filter(p => !CORE_PROP_NAMES.has(p.name) && p.type !== "title");
-  const [dynValues, setDynValues] = useState(() => buildInitialDyn(extraProps, initial));
+  const extraProps = getExtraProps(dbProps);
 
+  const [dynValues, setDynValues] = useState(() => buildInitialDyn(extraProps, initial));
   useEffect(() => { setDynValues(buildInitialDyn(extraProps, initial)); }, [initial?.id]);
 
   function buildInitialDyn(props, item) {
@@ -183,11 +283,7 @@ export function TestimonialForm({ mode, initial, dbProps = [], clients, clientsL
             <div style={{ ...sectionLabel, color:"#a78bfa", display:"flex", alignItems:"center", gap:5 }}>
               <span>✦</span> Additional properties
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 16px" }}>
-              {extraProps.map(p => (
-                <DynamicField key={p.name} prop={p} value={dynValues[p.name]} onChange={val => setDyn(p.name, val)} />
-              ))}
-            </div>
+            <ExtraPropsFields extraProps={extraProps} dynValues={dynValues} setDyn={setDyn} />
           </div>
         </>
       )}
@@ -235,7 +331,9 @@ export default function TestimonialEditModal({ item, dbProps = [], onClose, onDe
   const ssUrl        = resolveScreenshot(item.feedbackScreenshot);
   const rawUrl       = resolveScreenshot(item.rawScreenshot);
   const clientAvatar = resolveImageUrl(item);
-  const extraProps   = dbProps.filter(p => !CORE_PROP_NAMES.has(p.name) && p.type !== "title");
+
+  // ── FIX: use shared filter (includes "(from client" exclusion) ──
+  const extraProps = getExtraProps(dbProps);
 
   // Edit state
   const [feedback, setFeedback]                   = useState(item.feedback        || "");
@@ -402,15 +500,13 @@ export default function TestimonialEditModal({ item, dbProps = [], onClose, onDe
               <div><div style={sectionLabel}>Status</div><PillToggle options={STATUSES} selected={status} onToggle={s => setStatus(status === s ? "" : s)} activeColor="#f59e0b" activeBg="rgba(245,158,11,0.12)" /></div>
               <div><div style={sectionLabel}>Tools used</div><PillToggle options={TOOLS_LIST} selected={[...tools]} onToggle={toggleTool} /></div>
 
-              {/* Dynamic extra properties — edit */}
+              {/* Dynamic extra properties — edit (now handles files) */}
               {extraProps.length > 0 && (
                 <>
                   <div style={{ height:1, background:"rgba(59,130,246,0.18)", margin:"4px 0" }} />
                   <div>
                     <div style={{ ...sectionLabel, color:"#a78bfa", display:"flex", alignItems:"center", gap:5 }}><span>✦</span> Additional properties</div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0 16px" }}>
-                      {extraProps.map(p => <DynamicField key={p.name} prop={p} value={dynValues[p.name]} onChange={val => setDyn(p.name, val)} />)}
-                    </div>
+                    <ExtraPropsFields extraProps={extraProps} dynValues={dynValues} setDyn={setDyn} />
                   </div>
                 </>
               )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const BASE_URL = "https://niknotion-admin.onrender.com"||import.meta.env.VITE_API_URL;
+const BASE_URL = "http://localhost:3001"||import.meta.env.VITE_API_URL;
 const API_KEY  = import.meta.env.VITE_API_CLIENT_KEY;
 
 // ── Tiny keyframe injector ────────────────────────────────────────

@@ -1,4 +1,4 @@
-export const BASE_URL   = "https://niknotion-admin.onrender.com";
+export const BASE_URL   = "http://localhost:3001";
 export const ADMIN_KEY  = import.meta.env.VITE_API_CLIENT_KEY;
 export const PUBLIC_KEY = import.meta.env.VITE_API_SECRET;
 
