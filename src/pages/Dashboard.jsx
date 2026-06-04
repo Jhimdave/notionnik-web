@@ -30,11 +30,22 @@ function readCache(CACHE_KEY) {
   }
 }
 
-/* ── Image Proxy Helper ─────────────────────────────────────── */
-function proxyImage(url) {
-  if (!url) return null;
-  if (!url.includes("notion") && !url.includes("amazonaws")) return url;
-  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}&api_key=${API_KEY}`;
+// Replace proxyImage function with this:
+async function fetchProxiedImage(url, setImgSrc) {
+  if (!url) return;
+  if (!url.includes("notion") && !url.includes("amazonaws")) {
+    setImgSrc(url);
+    return;
+  }
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } }
+    );
+    if (!res.ok) return;
+    const blob = await res.blob();
+    setImgSrc(URL.createObjectURL(blob));
+  } catch {}
 }
 
 const WhatsAppIcon = () => (
@@ -67,13 +78,19 @@ const COLORS = [
 ];
 
 function Avatar({ src, initials, color }) {
+  const [imgSrc, setImgSrc] = useState(null);
   const [failed, setFailed] = useState(false);
-  const proxied = proxyImage(src);
 
-  if (proxied && !failed) {
+  useEffect(() => {
+    setImgSrc(null);
+    setFailed(false);
+    if (src) fetchProxiedImage(src, setImgSrc);
+  }, [src]);
+
+  if (imgSrc && !failed) {
     return (
       <img
-        src={proxied}
+        src={imgSrc}
         alt={initials}
         className="w-9 h-9 rounded-full object-cover flex-shrink-0"
         onError={() => setFailed(true)}
@@ -281,7 +298,7 @@ function ContactForm() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": API_KEY,
+          "Authorization": `Bearer ${API_KEY}`,
         },
         body: JSON.stringify(form),
       });
@@ -534,7 +551,7 @@ export default function Dashboard() {
   useEffect(() => {
     fetch(`${API_BASE}/api/website-stats`, {
       headers: {
-        "x-api-key": API_KEY,
+        "Authorization": `Bearer ${API_KEY}`,
       },
     })
       .then((r) => r.json())
@@ -566,7 +583,7 @@ export default function Dashboard() {
 
     fetch(`${API_BASE}/api/notion-services`, {
       headers: {
-        "x-api-key": API_KEY,
+        "Authorization": `Bearer ${API_KEY}`,
       },
     })
       .then((r) => {
@@ -595,7 +612,7 @@ export default function Dashboard() {
 
     fetch(`${API_BASE}/api/testimonials`, {
       headers: {
-        "x-api-key": API_KEY,
+        "Authorization": `Bearer ${API_KEY}`,
       },
     })
       .then(async (r) => {

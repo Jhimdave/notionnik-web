@@ -29,10 +29,10 @@ function readCache() {
 
 function writeCache(data) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch {
-    // Silently fail if localStorage is full or unavailable
-  }
+    localStorage.removeItem("services_cache");
+    const stripped = data.map(({ id, ...rest }) => rest);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: stripped, timestamp: Date.now() }));
+  } catch {}
 }
 
 const SEEDS = ["Alex","Jordan","Morgan","Taylor","Sam","Casey","Riley","Drew"];
@@ -99,7 +99,7 @@ export default function AboutUs() {
         setError(null);
 
         const res = await fetch(NOTION_PROXY_URL, {
-          headers: { "x-api-key": API_KEY },
+          headers: { "Authorization": `Bearer ${API_KEY}`, },
         });
         if (!res.ok) throw new Error(`Server error: ${res.status}`);
 

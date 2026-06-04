@@ -36,7 +36,7 @@ export default function Contact() {
       const res = await fetch(`${API_BASE}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
-          "x-api-key": API_KEY,
+          "Authorization": `Bearer ${API_KEY}`,
          },
         body: JSON.stringify(form),
       });

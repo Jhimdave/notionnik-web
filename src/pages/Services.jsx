@@ -29,12 +29,10 @@ function readCache() {
 
 function writeCache(data) {
   try {
-    // Also clean up the old cache key so it doesn't waste space
     localStorage.removeItem("services_cache");
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
-  } catch {
-    // Silently fail if localStorage is full or unavailable
-  }
+    const stripped = data.map(({ id, ...rest }) => rest);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: stripped, timestamp: Date.now() }));
+  } catch {}
 }
 
 /* ── Notion page → usable object ──────────────────────────────── */
@@ -254,7 +252,7 @@ export default function Services() {
 
     /* 2. Fetch from backend */
     fetch(`${API_BASE}/api/notion-services`, {
-      headers: { "x-api-key": API_KEY },
+      headers: { "Authorization": `Bearer ${API_KEY}`, },
     })
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json() })
       .then(d => {

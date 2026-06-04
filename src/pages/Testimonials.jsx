@@ -22,10 +22,9 @@ const CACHE_TTL = 15 * 60 * 1000;
 
 function writeCache(data) {
   try {
-    localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ data, timestamp: Date.now() }),
-    );
+    localStorage.removeItem("services_cache");
+    const stripped = data.map(({ id, ...rest }) => rest);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ data: stripped, timestamp: Date.now() }));
   } catch {}
 }
 
@@ -33,22 +32,36 @@ function readCache() {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
-
     const parsed = JSON.parse(raw);
     if (!parsed?.data || !parsed?.timestamp) return null;
-
     if (Date.now() - parsed.timestamp > CACHE_TTL) return null;
-
     return parsed.data;
   } catch {
     return null;
   }
 }
 
-function proxyImage(url) {
-  if (!url) return null;
-  if (!url.includes("notion") && !url.includes("amazonaws")) return url;
-  return `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}&api_key=${API_KEY}`;
+// ── Secure image fetcher (keeps API key out of URLs) ──────────────
+async function fetchProxiedImage(url, setImgSrc) {
+  if (!url) return;
+
+  // External URLs that don't need proxying
+  if (!url.includes("notion") && !url.includes("amazonaws")) {
+    setImgSrc(url);
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/proxy-image?url=${encodeURIComponent(url)}`,
+      { headers: { Authorization: `Bearer ${API_KEY}` } },
+    );
+    if (!res.ok) return;
+    const blob = await res.blob();
+    setImgSrc(URL.createObjectURL(blob));
+  } catch {
+    // Avatar fallback handles it
+  }
 }
 
 function Stars({ n = 5 }) {
@@ -63,13 +76,21 @@ function Stars({ n = 5 }) {
   );
 }
 
+// ── Avatar: fetches via blob, falls back to initials ─────────────
 function Avatar({ src, initials, color }) {
+  const [imgSrc, setImgSrc] = useState(null);
   const [failed, setFailed] = useState(false);
-  const proxied = proxyImage(src);
-  if (proxied && !failed) {
+
+  useEffect(() => {
+    setImgSrc(null);
+    setFailed(false);
+    if (src) fetchProxiedImage(src, setImgSrc);
+  }, [src]);
+
+  if (imgSrc && !failed) {
     return (
       <img
-        src={proxied}
+        src={imgSrc}
         alt={initials}
         className="w-9 h-9 rounded-full object-cover flex-shrink-0"
         onError={() => setFailed(true)}
@@ -111,6 +132,7 @@ function getClientInfoLine(company) {
 
 /* ── Zoomable Image ───────────────────────────────────────────── */
 function ZoomableImage({ src, alt, style, onError }) {
+  const [blobSrc, setBlobSrc] = useState(null);
   const [zoomed, setZoomed] = useState(false);
   const [scale, setScale] = useState(1);
   const [origin, setOrigin] = useState({ x: 50, y: 50 });
@@ -119,6 +141,11 @@ function ZoomableImage({ src, alt, style, onError }) {
   const [startDrag, setStartDrag] = useState({ x: 0, y: 0 });
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const imgRef = useRef(null);
+
+  useEffect(() => {
+    setBlobSrc(null);
+    if (src) fetchProxiedImage(src, setBlobSrc);
+  }, [src]);
 
   const openZoom = (e) => {
     e.stopPropagation();
@@ -203,17 +230,14 @@ function ZoomableImage({ src, alt, style, onError }) {
     }
   };
 
+  // Don't render at all if the blob hasn't loaded yet
+  if (!blobSrc) return null;
+
   return (
     <>
-      <div
-        style={{
-          position: "relative",
-          display: "inline-block",
-          width: "160px",
-        }}
-      >
+      <div style={{ position: "relative", display: "inline-block", width: "160px" }}>
         <img
-          src={src}
+          src={blobSrc}
           alt={alt}
           style={{
             ...style,
@@ -243,28 +267,13 @@ function ZoomableImage({ src, alt, style, onError }) {
             border: "1px solid rgba(255,255,255,0.12)",
           }}
         >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="rgba(255,255,255,0.75)"
-            strokeWidth="2.5"
-          >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.5">
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
             <line x1="11" y1="8" x2="11" y2="14" />
             <line x1="8" y1="11" x2="14" y2="11" />
           </svg>
-          <span
-            style={{
-              fontSize: "10px",
-              color: "rgba(255,255,255,0.75)",
-              fontFamily: "'JetBrains Mono', monospace",
-              fontWeight: 500,
-              letterSpacing: "0.03em",
-            }}
-          >
+          <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.75)", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, letterSpacing: "0.03em" }}>
             zoom
           </span>
         </div>
@@ -272,213 +281,47 @@ function ZoomableImage({ src, alt, style, onError }) {
 
       {zoomed && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
-            background: "rgba(0,0,0,0.92)",
-            backdropFilter: "blur(12px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-          }}
+          style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.92)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}
           onClick={closeZoom}
         >
           <div
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: "56px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0 20px",
-              background: "rgba(0,0,0,0.40)",
-              borderBottom: "1px solid rgba(255,255,255,0.07)",
-              zIndex: 10,
-            }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, height: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 20px", background: "rgba(0,0,0,0.40)", borderBottom: "1px solid rgba(255,255,255,0.07)", zIndex: 10 }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: "rgba(255,255,255,0.45)",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                }}
-              >
+              <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 Upwork Feedback
               </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: "rgba(255,255,255,0.25)",
-                }}
-              >
-                ·
-              </span>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: "rgba(45,142,245,0.70)",
-                }}
-              >
+              <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "rgba(255,255,255,0.25)" }}>·</span>
+              <span style={{ fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "rgba(45,142,245,0.70)" }}>
                 {Math.round(scale * 100)}%
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setScale((s) => Math.max(s - 0.5, 1));
-                  if (scale - 0.5 <= 1) setPos({ x: 0, y: 0 });
-                }}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  color: "rgba(255,255,255,0.65)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                title="Zoom out"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
+              {/* Zoom out */}
+              <button onClick={(e) => { e.stopPropagation(); setScale((s) => Math.max(s - 0.5, 1)); if (scale - 0.5 <= 1) setPos({ x: 0, y: 0 }); }} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Zoom out">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setScale((s) => Math.min(s + 0.5, 5));
-                }}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  color: "rgba(255,255,255,0.65)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                title="Zoom in"
-              >
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  <line x1="11" y1="8" x2="11" y2="14" />
-                  <line x1="8" y1="11" x2="14" y2="11" />
-                </svg>
+              {/* Zoom in */}
+              <button onClick={(e) => { e.stopPropagation(); setScale((s) => Math.min(s + 0.5, 5)); }} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }} title="Zoom in">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /><line x1="11" y1="8" x2="11" y2="14" /><line x1="8" y1="11" x2="14" y2="11" /></svg>
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setScale(1);
-                  setPos({ x: 0, y: 0 });
-                }}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  color: "rgba(255,255,255,0.65)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "11px",
-                  fontFamily: "monospace",
-                }}
-                title="Reset zoom"
-              >
+              {/* Reset */}
+              <button onClick={(e) => { e.stopPropagation(); setScale(1); setPos({ x: 0, y: 0 }); }} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontFamily: "monospace" }} title="Reset zoom">
                 1:1
               </button>
-              <button
-                onClick={closeZoom}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.10)",
-                  color: "rgba(255,255,255,0.65)",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginLeft: "4px",
-                }}
-                title="Close (Esc)"
-              >
+              {/* Close */}
+              <button onClick={closeZoom} style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.65)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: "4px" }} title="Close (Esc)">
                 ✕
               </button>
             </div>
           </div>
 
-          <div
-            style={{
-              position: "absolute",
-              bottom: "20px",
-              left: "50%",
-              transform: "translateX(-50%)",
-              background: "rgba(0,0,0,0.50)",
-              backdropFilter: "blur(6px)",
-              borderRadius: "999px",
-              padding: "6px 14px",
-              fontSize: "11px",
-              fontFamily: "'JetBrains Mono', monospace",
-              color: "rgba(255,255,255,0.35)",
-              letterSpacing: "0.05em",
-              pointerEvents: "none",
-              border: "1px solid rgba(255,255,255,0.07)",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <div style={{ position: "absolute", bottom: "20px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.50)", backdropFilter: "blur(6px)", borderRadius: "999px", padding: "6px 14px", fontSize: "11px", fontFamily: "'JetBrains Mono', monospace", color: "rgba(255,255,255,0.35)", letterSpacing: "0.05em", pointerEvents: "none", border: "1px solid rgba(255,255,255,0.07)", whiteSpace: "nowrap" }}>
             scroll to zoom · drag to pan · double-click to toggle · esc to close
           </div>
 
           <div
-            style={{
-              overflow: "hidden",
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              paddingTop: "56px",
-              paddingBottom: "48px",
-              cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "zoom-out",
-            }}
+            style={{ overflow: "hidden", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "56px", paddingBottom: "48px", cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "zoom-out" }}
             onClick={(e) => e.stopPropagation()}
             onWheel={handleWheel}
             onMouseDown={handleMouseDown}
@@ -491,20 +334,10 @@ function ZoomableImage({ src, alt, style, onError }) {
           >
             <img
               ref={imgRef}
-              src={src}
+              src={blobSrc}
               alt={alt}
               draggable={false}
-              style={{
-                maxWidth: "90%",
-                maxHeight: "100%",
-                borderRadius: "12px",
-                boxShadow: "0 24px 80px rgba(0,0,0,0.7)",
-                transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`,
-                transformOrigin: `${origin.x}% ${origin.y}%`,
-                transition: dragging ? "none" : "transform 0.15s ease",
-                userSelect: "none",
-                willChange: "transform",
-              }}
+              style={{ maxWidth: "90%", maxHeight: "100%", borderRadius: "12px", boxShadow: "0 24px 80px rgba(0,0,0,0.7)", transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`, transformOrigin: `${origin.x}% ${origin.y}%`, transition: dragging ? "none" : "transform 0.15s ease", userSelect: "none", willChange: "transform" }}
             />
           </div>
         </div>
@@ -579,22 +412,16 @@ function Modal({ t, onClose, isDark }) {
   const clientInfo = getClientInfoLine(t.company);
 
   useEffect(() => {
-    const handler = (e) => {
-      if (e.key === "Escape") onClose();
-    };
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
   const modalBg = isDark ? "rgba(7,14,37,0.97)" : "rgba(255,255,255,0.97)";
-  const modalBorder = isDark
-    ? "rgba(45,142,245,0.20)"
-    : "rgba(84,131,179,0.22)";
+  const modalBorder = isDark ? "rgba(45,142,245,0.20)" : "rgba(84,131,179,0.22)";
   const headingColor = isDark ? "#f0f6ff" : "#021024";
   const bodyColor = isDark ? "rgba(186,220,255,0.82)" : "rgba(5,38,89,0.72)";
-  const mutedColor = isDark
-    ? "rgba(125,160,202,0.60)"
-    : "rgba(84,131,179,0.70)";
+  const mutedColor = isDark ? "rgba(125,160,202,0.60)" : "rgba(84,131,179,0.70)";
   const labelColor = isDark ? "rgba(84,131,179,0.65)" : "rgba(84,131,179,0.80)";
   const closeBg = isDark ? "rgba(255,255,255,0.07)" : "rgba(5,38,89,0.07)";
   const closeHoverBg = isDark ? "rgba(255,255,255,0.14)" : "rgba(5,38,89,0.12)";
@@ -603,108 +430,40 @@ function Modal({ t, onClose, isDark }) {
   const toolBorder = isDark ? "rgba(45,142,245,0.25)" : "rgba(84,131,179,0.28)";
   const toolColor = isDark ? "rgba(186,220,255,0.85)" : "#052659";
   const imgBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(84,131,179,0.15)";
-  const dividerColor = isDark
-    ? "rgba(255,255,255,0.06)"
-    : "rgba(84,131,179,0.12)";
+  const dividerColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(84,131,179,0.12)";
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
         className="absolute inset-0"
-        style={{
-          background: isDark ? "rgba(0,0,0,0.70)" : "rgba(2,16,36,0.38)",
-          backdropFilter: "blur(8px)",
-        }}
+        style={{ background: isDark ? "rgba(0,0,0,0.70)" : "rgba(2,16,36,0.38)", backdropFilter: "blur(8px)" }}
         onClick={onClose}
       />
       <div
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: "680px",
-          background: modalBg,
-          border: `1px solid ${modalBorder}`,
-          borderRadius: "24px",
-          padding: "32px",
-          boxShadow: isDark
-            ? "0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(193,232,255,0.05) inset"
-            : "0 32px 80px rgba(2,16,36,0.18), 0 0 0 1px rgba(255,255,255,0.8) inset",
-          overflowY: "auto",
-          maxHeight: "90vh",
-          backdropFilter: "blur(20px)",
-        }}
+        style={{ position: "relative", width: "100%", maxWidth: "680px", background: modalBg, border: `1px solid ${modalBorder}`, borderRadius: "24px", padding: "32px", boxShadow: isDark ? "0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(193,232,255,0.05) inset" : "0 32px 80px rgba(2,16,36,0.18), 0 0 0 1px rgba(255,255,255,0.8) inset", overflowY: "auto", maxHeight: "90vh", backdropFilter: "blur(20px)" }}
       >
         <button
           onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "16px",
-            right: "16px",
-            width: "32px",
-            height: "32px",
-            borderRadius: "50%",
-            background: closeBg,
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: closeColor,
-            fontSize: "13px",
-            transition: "all 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = closeHoverBg;
-            e.currentTarget.style.color = headingColor;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = closeBg;
-            e.currentTarget.style.color = closeColor;
-          }}
+          style={{ position: "absolute", top: "16px", right: "16px", width: "32px", height: "32px", borderRadius: "50%", background: closeBg, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: closeColor, fontSize: "13px", transition: "all 0.15s" }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = closeHoverBg; e.currentTarget.style.color = headingColor; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = closeBg; e.currentTarget.style.color = closeColor; }}
         >
           ✕
         </button>
 
-        <div className="mb-5">
-          <Stars n={t.rate} />
-        </div>
+        <div className="mb-5"><Stars n={t.rate} /></div>
 
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            marginBottom: "22px",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "22px" }}>
           <Avatar src={t.image} initials={initials} color={COLORS[0]} />
           <div>
-            <p
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontWeight: 800,
-                fontSize: "17px",
-                color: headingColor,
-                margin: 0,
-                lineHeight: 1.2,
-              }}
-            >
+            <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: "17px", color: headingColor, margin: 0, lineHeight: 1.2 }}>
               {t.displayName}
             </p>
             {clientInfo && (
-              <p
-                style={{
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontSize: "12px",
-                  color: mutedColor,
-                  margin: "3px 0 0",
-                }}
-              >
+              <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "12px", color: mutedColor, margin: "3px 0 0" }}>
                 {clientInfo}
               </p>
             )}
@@ -713,48 +472,20 @@ function Modal({ t, onClose, isDark }) {
 
         {t.feedback && (
           <div style={{ marginBottom: "22px" }}>
-            <p
-              style={{
-                fontFamily: "'Plus Jakarta Sans', sans-serif",
-                fontSize: "15px",
-                lineHeight: 1.75,
-                color: bodyColor,
-                margin: 0,
-              }}
-            >
+            <p style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: "15px", lineHeight: 1.75, color: bodyColor, margin: 0 }}>
               {t.feedback}
             </p>
           </div>
         )}
 
-        <div
-          style={{ height: "1px", background: dividerColor, margin: "22px 0" }}
-        />
+        <div style={{ height: "1px", background: dividerColor, margin: "22px 0" }} />
 
         {t.projectTitle && (
           <div style={{ marginBottom: "18px" }}>
-            <p
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: labelColor,
-                marginBottom: "6px",
-              }}
-            >
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "6px" }}>
               Project
             </p>
-            <p
-              style={{
-                fontFamily: "'Syne', sans-serif",
-                fontWeight: 700,
-                fontSize: "15px",
-                color: headingColor,
-                margin: 0,
-              }}
-            >
+            <p style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: "15px", color: headingColor, margin: 0 }}>
               {t.projectTitle}
             </p>
           </div>
@@ -762,64 +493,27 @@ function Modal({ t, onClose, isDark }) {
 
         {t.feedbackScreenshot && (
           <div style={{ marginBottom: "18px" }}>
-            <p
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: labelColor,
-                marginBottom: "8px",
-              }}
-            >
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "8px" }}>
               Upwork Feedback
             </p>
+            {/* Pass raw URL — ZoomableImage handles proxying internally */}
             <ZoomableImage
-              src={proxyImage(t.feedbackScreenshot)}
+              src={t.feedbackScreenshot}
               alt="Feedback screenshot"
-              style={{
-                borderRadius: "10px",
-                border: `1px solid ${imgBorder}`,
-                display: "block",
-              }}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
+              style={{ borderRadius: "10px", border: `1px solid ${imgBorder}`, display: "block" }}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
           </div>
         )}
 
         {t.tools && t.tools.length > 0 && (
           <div style={{ marginBottom: "18px" }}>
-            <p
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: "9px",
-                fontWeight: 700,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: labelColor,
-                marginBottom: "10px",
-              }}
-            >
+            <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "9px", fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: labelColor, marginBottom: "10px" }}>
               Tools Used
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {t.tools.map((tool) => (
-                <span
-                  key={tool}
-                  style={{
-                    padding: "5px 13px",
-                    borderRadius: "999px",
-                    fontSize: "12px",
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontWeight: 500,
-                    color: toolColor,
-                    background: toolBg,
-                    border: `1px solid ${toolBorder}`,
-                  }}
-                >
+                <span key={tool} style={{ padding: "5px 13px", borderRadius: "999px", fontSize: "12px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, color: toolColor, background: toolBg, border: `1px solid ${toolBorder}` }}>
                   {tool}
                 </span>
               ))}
@@ -832,45 +526,11 @@ function Modal({ t, onClose, isDark }) {
             href={t.credibilityLink}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              width: "100%",
-              padding: "12px 24px",
-              marginTop: "8px",
-              background: "linear-gradient(135deg,#052659,#021024)",
-              color: "#C1E8FF",
-              borderRadius: "12px",
-              border: "none",
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontWeight: 700,
-              fontSize: "14px",
-              textDecoration: "none",
-              cursor: "pointer",
-              boxShadow: isDark
-                ? "0 6px 20px rgba(2,16,36,0.50)"
-                : "0 6px 20px rgba(5,38,89,0.25)",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "linear-gradient(135deg,#5483B3,#052659)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background =
-                "linear-gradient(135deg,#052659,#021024)";
-            }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", padding: "12px 24px", marginTop: "8px", background: "linear-gradient(135deg,#052659,#021024)", color: "#C1E8FF", borderRadius: "12px", border: "none", fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, fontSize: "14px", textDecoration: "none", cursor: "pointer", boxShadow: isDark ? "0 6px 20px rgba(2,16,36,0.50)" : "0 6px 20px rgba(5,38,89,0.25)", transition: "all 0.2s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "linear-gradient(135deg,#5483B3,#052659)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "linear-gradient(135deg,#052659,#021024)"; }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-            >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
@@ -962,7 +622,6 @@ function ReviewsCarousel({ testimonials, onOpen }) {
   return (
     <div className="relative w-full md:w-[70%] mx-auto px-4">
       <style>{carouselStyles}</style>
-
       <div className="mask-fade-container flex flex-col gap-5 py-4 overflow-hidden">
         <div className="overflow-hidden">
           <div className="carousel-row carousel-row-left">
@@ -973,7 +632,6 @@ function ReviewsCarousel({ testimonials, onOpen }) {
             ))}
           </div>
         </div>
-
         <div className="overflow-hidden hidden md:block">
           <div className="carousel-row carousel-row-right">
             {rows[1].map((t, i) => (
@@ -983,12 +641,8 @@ function ReviewsCarousel({ testimonials, onOpen }) {
             ))}
           </div>
         </div>
-
         <div className="overflow-hidden hidden lg:block">
-          <div
-            className="carousel-row carousel-row-left"
-            style={{ animationDuration: "45s" }}
-          >
+          <div className="carousel-row carousel-row-left" style={{ animationDuration: "45s" }}>
             {rows[2].map((t, i) => (
               <div key={`r3-${t.id}-${i}`} className="carousel-card">
                 <TestimonialCard t={t} i={i} onClick={onOpen} />
@@ -1019,17 +673,11 @@ export default function Testimonials() {
     }
 
     fetch(`${API_BASE}/api/testimonials`, {
-      headers: {
-        "x-api-key": API_KEY,
-      },
+      headers: { Authorization: `Bearer ${API_KEY}` },
     })
       .then(async (r) => {
         const text = await r.text();
-        try {
-          return JSON.parse(text);
-        } catch {
-          return null;
-        }
+        try { return JSON.parse(text); } catch { return null; }
       })
       .then((res) => {
         if (res?.success && Array.isArray(res.data)) {
@@ -1052,9 +700,7 @@ export default function Testimonials() {
 
   useEffect(() => {
     document.body.style.overflow = modal ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [modal]);
 
   const featured = testimonials[active];
@@ -1135,8 +781,7 @@ export default function Testimonials() {
                       style={{
                         width: i === active ? 28 : 8,
                         height: 8,
-                        background:
-                          i === active ? "#2d8ef5" : "rgba(45,142,245,0.2)",
+                        background: i === active ? "#2d8ef5" : "rgba(45,142,245,0.2)",
                       }}
                     />
                   ))}

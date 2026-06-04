@@ -590,7 +590,7 @@ export default function Book() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": API_KEY,
+          "Authorization": `Bearer ${API_KEY}`,
         },
       });
       const data = await res.json();
@@ -647,7 +647,7 @@ export default function Book() {
     try {
       const res = await fetch(`${API_BASE}/api/book`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" ,"Authorization": `Bearer ${API_KEY}`,},
         body: JSON.stringify({
           name: form.name,
           email: form.email,
