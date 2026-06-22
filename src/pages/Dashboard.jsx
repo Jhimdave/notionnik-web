@@ -1057,7 +1057,7 @@ export default function Dashboard() {
               onClick={() => setTestimonialPage((p) => Math.max(0, p - 1))}
               disabled={!canGoPrev}
               aria-label="Previous testimonials"
-              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20"
             >
               <svg
                 width="16"
@@ -1175,7 +1175,7 @@ export default function Dashboard() {
               }
               disabled={!canGoNext}
               aria-label="Next testimonials"
-              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20 disabled:cursor-not-allowed"
+              className="flex-shrink-0 w-11 h-11 rounded-full border border-white/[0.10] bg-navy-800/70 backdrop-blur-sm flex items-center justify-center text-blue-300/60 hover:text-white hover:border-brand-500/40 hover:bg-navy-700/80 transition-all duration-200 disabled:opacity-20"
             >
               <svg
                 width="16"

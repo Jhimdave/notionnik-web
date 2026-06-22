@@ -63,7 +63,6 @@ export default function FAQSection({ isDark }) {
                     textAlign: "left",
                     background: isOpen ? rowHoverBg : "transparent",
                     border: "none",
-                    cursor: "none",
                     transition: "background 0.2s",
                   }}
                 >

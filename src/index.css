@@ -325,10 +325,6 @@ body {
 .light [class*="border-red-500/20"] { border-color: rgba(239,68,68,0.22) !important; }
 .light [class*="text-red-300"]      { color: #b91c1c !important; }
 
-/* ── Global cursor ───────────────────────────────────────────────── */
-@media (pointer: fine) {
-  body, a, button, [role="button"] { cursor: none !important; }
-}
 
 /* ── Gradient animated border ────────────────────────────────────── */
 .gradient-border { position: relative; }

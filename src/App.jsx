@@ -4,7 +4,6 @@ import { ThemeProvider } from './pages/ThemeContext'
 import Navbar          from './components/Navbar'
 import Footer          from './components/Footer'
 import Chatbot         from './components/Chatbot'
-import CustomCursor    from './components/customcursor'
 import PeepingRobot    from './components/PeepingRobot'
 import PageBackground  from './pages/PageBackground'
 import Dashboard       from './pages/Dashboard'
@@ -15,26 +14,18 @@ import Testimonials    from './pages/Testimonials'
 import AboutUs         from './pages/AboutUs'
 import Book            from './pages/Book'
 import Contact         from './pages/Contact'
+import NotFound        from './pages/NotFound'
 import './App.css'
 import ChatBox from './components/Chatbot'
-import Admin from './admin/admin-side'
-import AdminDashboard from './admin/admin_dashboard'
-
-const ADMIN_ROUTES = ['/admin/login']
 
 function AppLayout() {
   const [openChat, setOpenChat] = useState(false)
-  const { pathname } = useLocation()
-
-  // Covers ALL /admin/* routes automatically:
-  const isAdminRoute = pathname.startsWith('/admin')
 
   return (
     <ThemeProvider>
       <PageBackground />
-      <CustomCursor />
       <div className="min-h-screen flex flex-col">
-        {!isAdminRoute && <Navbar />}
+        <Navbar />
         <div className="flex-1">
           <Routes>
             <Route path="/"                 element={<Dashboard    />} />
@@ -45,14 +36,13 @@ function AppLayout() {
             <Route path="/about"            element={<AboutUs      />} />
             <Route path="/book"             element={<Book         />} />
             <Route path="/contact"          element={<Contact      />} />
-            <Route path="/admin/login"      element={<Admin        />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="*"                 element={<NotFound     />} />
           </Routes>
         </div>
-        {!isAdminRoute && <Footer />}
-        {!isAdminRoute && <PeepingRobot onOpenChat={() => setOpenChat(true)} />}
-        {!isAdminRoute && <Chatbot forceOpen={openChat} onOpened={() => setOpenChat(false)} />}
-        {!isAdminRoute && <ChatBox forceOpen={openChat} onOpened={() => setOpenChat(false)} />}
+        <Footer />
+        <PeepingRobot onOpenChat={() => setOpenChat(true)} />
+        <Chatbot forceOpen={openChat} onOpened={() => setOpenChat(false)} />
+        <ChatBox forceOpen={openChat} onOpened={() => setOpenChat(false)} />
       </div>
     </ThemeProvider>
   )

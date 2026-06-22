@@ -215,7 +215,7 @@ export default function Chatbot({ forceOpen, onOpened }) {
             <button
               onClick={() => send()}
               disabled={!input.trim() || typing}
-              className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white hover:bg-brand-400 transition-colors flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center text-white hover:bg-brand-400 transition-colors flex-shrink-0 disabled:opacity-40"
             >
               ➤
             </button>
