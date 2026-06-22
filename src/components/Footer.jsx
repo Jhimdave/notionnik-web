@@ -269,6 +269,7 @@ export default function Footer() {
             </div>
           </div>
 
+
           {/* Divider */}
           <div className="glow-divider mb-6" />
 
